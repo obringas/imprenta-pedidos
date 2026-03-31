@@ -1,0 +1,14 @@
+{
+  "name": "Pedidos Imprenta",
+  "short_name": "Pedidos",
+  "start_url": "/pedidos",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5efe5",
+  "theme_color": "#9a3412",
+  "icons": [
+    { "src": "favicon.ico", "sizes": "192x192", "type": "image/x-icon" },
+    { "src": "favicon.ico", "sizes": "512x512", "type": "image/x-icon" }
+  ]
+}
+
