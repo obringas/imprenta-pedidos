@@ -6,7 +6,7 @@ import { PedidoDetalle } from '../../../pedidos/domain/pedido.model';
 import { PedidosFacade } from '../../../pedidos/state/pedidos.facade';
 import { InformesFacade } from '../../state/informes.facade';
 
-type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
+type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
 
 @Component({
   selector: 'app-informes-page',
@@ -18,7 +18,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
       <div>
         <p class="eyebrow">Dashboard</p>
         <h1>Informes</h1>
-        <p class="page-description">Visión operativa y financiera para decidir qué imprimir y qué cobrar primero.</p>
+        <p class="page-description">Vision operativa y financiera para decidir que imprimir, cobrar y entregar primero.</p>
       </div>
     </section>
 
@@ -26,6 +26,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
       <button type="button" class="tab-button" [class.tab-button-active]="tabActiva() === 'resumen'" (click)="tabActiva.set('resumen')">Resumen</button>
       <button type="button" class="tab-button" [class.tab-button-active]="tabActiva() === 'sin-pagar'" (click)="tabActiva.set('sin-pagar')">Sin pagar</button>
       <button type="button" class="tab-button" [class.tab-button-active]="tabActiva() === 'faltan-imprimir'" (click)="tabActiva.set('faltan-imprimir')">Faltan imprimir</button>
+      <button type="button" class="tab-button" [class.tab-button-active]="tabActiva() === 'sin-entregar'" (click)="tabActiva.set('sin-entregar')">Sin entregar</button>
     </section>
 
     @if (tabActiva() === 'resumen') {
@@ -150,7 +151,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
                 <div class="card-row report-row">
                   <div>
                     <strong>{{ pedido.alumno }}</strong>
-                    <p class="caption">{{ pedido.division || 'Sin división' }} • {{ pedido.libroHojas }} hojas</p>
+                    <p class="caption">{{ pedido.division || 'Sin division' }} • {{ pedido.libroHojas }} hojas</p>
                   </div>
                   <button type="button" class="secondary-button" (click)="marcarImpreso(pedido)">Marcar impreso</button>
                 </div>
@@ -158,12 +159,51 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
             </div>
           </details>
         } @empty {
-          <section class="card"><p class="caption">No hay pedidos pendientes de impresión.</p></section>
+          <section class="card"><p class="caption">No hay pedidos pendientes de impresion.</p></section>
         }
 
         <footer class="report-footer card">
           <span>Total hojas necesarias</span>
           <strong>{{ facade.totalHojasPendientes(libroFaltanImprimirId()) }}</strong>
+        </footer>
+      </section>
+    }
+
+    @if (tabActiva() === 'sin-entregar') {
+      <section class="card stack">
+        <div class="card-row">
+          <h2>Sin entregar</h2>
+          <span class="caption">Pedidos impresos y todavia pendientes de entrega</span>
+        </div>
+
+        <label class="field">
+          <span>Filtrar por libro</span>
+          <select [value]="libroSinEntregarId() ?? ''" (change)="libroSinEntregarId.set($any($event.target).value || null)">
+            <option value="">Todos</option>
+            @for (libro of librosFacade.activos(); track libro.id) {
+              <option [value]="libro.id">{{ libro.titulo }}</option>
+            }
+          </select>
+        </label>
+
+        @for (pedido of facade.sinEntregarPorLibro(libroSinEntregarId()); track pedido.id) {
+          <div class="card-row report-row">
+            <div>
+              <strong>{{ pedido.alumno }}</strong>
+              <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }}</p>
+            </div>
+            <div class="card-meta">
+              <strong>{{ pedido.estadoPago }}</strong>
+              <button type="button" class="secondary-button" (click)="marcarEntregado(pedido)">Marcar entregado</button>
+            </div>
+          </div>
+        } @empty {
+          <p class="caption">No hay pedidos impresos pendientes de entrega.</p>
+        }
+
+        <footer class="report-footer">
+          <span>Total pendientes de entrega</span>
+          <strong>{{ facade.totalSinEntregar(libroSinEntregarId()) }}</strong>
         </footer>
       </section>
     }
@@ -178,6 +218,7 @@ export class InformesPageComponent {
   protected readonly tabActiva = signal<InformeTab>('resumen');
   protected readonly libroSinPagarId = signal<string | null>(null);
   protected readonly libroFaltanImprimirId = signal<string | null>(null);
+  protected readonly libroSinEntregarId = signal<string | null>(null);
 
   constructor() {
     effect(() => {
@@ -200,7 +241,16 @@ export class InformesPageComponent {
       await this.pedidosFacade.toggleImpresion(pedido);
       this.toastService.success('Pedido marcado como impreso.');
     } catch {
-      this.toastService.error('No se pudo actualizar la impresión.');
+      this.toastService.error('No se pudo actualizar la impresion.');
+    }
+  }
+
+  protected async marcarEntregado(pedido: PedidoDetalle): Promise<void> {
+    try {
+      await this.pedidosFacade.toggleEntrega(pedido);
+      this.toastService.success('Pedido marcado como entregado.');
+    } catch {
+      this.toastService.error('No se pudo actualizar la entrega.');
     }
   }
 }

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   ESTADO_ENTREGA,
@@ -30,7 +31,7 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
             }
           </select>
           @if (mostrarError('libroId')) {
-            <small class="field-error">Elegí un libro para crear el pedido.</small>
+            <small class="field-error">Elegi un libro para crear el pedido.</small>
           }
         </label>
 
@@ -45,17 +46,17 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
 
       <div class="form-row compact-row create-top-grid">
         <label class="field">
-          <span>División</span>
+          <span>Division</span>
           <input type="text" formControlName="division" [class.input-invalid]="mostrarError('division')" />
           @if (mostrarError('division')) {
-            <small class="field-error">La división debe ser corta para identificar el curso.</small>
+            <small class="field-error">La division debe ser corta para identificar el curso.</small>
           }
         </label>
         <label class="field">
           <span>Precio</span>
           <input type="number" formControlName="precioCobrado" [class.input-invalid]="mostrarError('precioCobrado')" />
           @if (mostrarError('precioCobrado')) {
-            <small class="field-error">Ingresá un precio mayor que 0.</small>
+            <small class="field-error">Ingresa un precio mayor que 0.</small>
           }
         </label>
       </div>
@@ -76,17 +77,17 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
             Pendiente
           </button>
           <button type="button" class="segment-button" [class.segment-button-active]="form.controls.estadoPago.value === ESTADO_PAGO.SENA" (click)="setEstadoPago(ESTADO_PAGO.SENA)">
-            Seña
+            Sena
           </button>
         </div>
 
         @if (muestraMontoSena()) {
           <div class="conditional-panel">
             <label class="field">
-              <span>Monto de seña</span>
+              <span>Monto de sena</span>
               <input type="number" formControlName="montoCobrado" [class.input-invalid]="mostrarError('montoCobrado')" />
               @if (mostrarError('montoCobrado')) {
-                <small class="field-error">La seña debe ser mayor que 0 y menor al precio total.</small>
+                <small class="field-error">La sena debe ser mayor que 0 y menor al precio total.</small>
               }
             </label>
           </div>
@@ -100,7 +101,7 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
       @if (modoDetalle()) {
         <div class="form-row compact-row">
           <label class="field">
-            <span>Impresión</span>
+            <span>Impresion</span>
             <select formControlName="estadoImpresion">
               <option [value]="ESTADO_IMPRESION.PENDIENTE">Pendiente</option>
               <option [value]="ESTADO_IMPRESION.IMPRESO">Impreso</option>
@@ -114,7 +115,7 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
               <option [value]="ESTADO_ENTREGA.ENTREGADO">Entregado</option>
             </select>
             @if (mostrarError('estadoEntrega')) {
-              <small class="field-error">No podés marcar como entregado un pedido que todavía no fue impreso.</small>
+              <small class="field-error">No podes marcar como entregado un pedido que todavia no fue impreso.</small>
             }
           </label>
         </div>
@@ -144,7 +145,7 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
           </div>
           @if (pedido()?.fechaImpresion) {
             <div class="summary-row">
-              <span>Fecha impresión</span>
+              <span>Fecha impresion</span>
               <strong>{{ pedido()?.fechaImpresion }}</strong>
             </div>
           }
@@ -171,6 +172,7 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
 })
 export class PedidoFormComponent {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly pedido = input<PedidoDetalle | null>(null);
   readonly cta = input('Guardar');
@@ -194,10 +196,15 @@ export class PedidoFormComponent {
     observaciones: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(280)] }),
   });
 
-  protected readonly saldo = computed(() => calcularSaldo(this.form.controls.precioCobrado.value, this.form.controls.montoCobrado.value));
-  protected readonly muestraMontoSena = computed(() => this.form.controls.estadoPago.value === ESTADO_PAGO.SENA);
+  protected saldo(): number {
+    return calcularSaldo(this.form.controls.precioCobrado.value, this.form.controls.montoCobrado.value);
+  }
 
-  protected readonly estadoGeneralPreview = computed(() => {
+  protected muestraMontoSena(): boolean {
+    return this.form.controls.estadoPago.value === ESTADO_PAGO.SENA;
+  }
+
+  protected estadoGeneralPreview() {
     return determinarEstadoGeneral({
       id: this.pedido()?.id ?? 'preview',
       libroId: this.form.controls.libroId.value,
@@ -217,15 +224,15 @@ export class PedidoFormComponent {
       creadoEn: this.pedido()?.creadoEn ?? '',
       actualizadoEn: this.pedido()?.actualizadoEn ?? '',
     });
-  });
+  }
 
-  protected readonly etiquetaPagoRapido = computed(() => {
+  protected etiquetaPagoRapido(): string {
     if (this.form.controls.estadoPago.value === ESTADO_PAGO.PAGADO) {
-      return `Se cobrará completo: ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(this.form.controls.precioCobrado.value)}`;
+      return `Se cobrara completo: ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(this.form.controls.precioCobrado.value)}`;
     }
 
-    return 'Sin cobro registrado todavía.';
-  });
+    return 'Sin cobro registrado todavia.';
+  }
 
   constructor() {
     effect(() => {
@@ -251,24 +258,16 @@ export class PedidoFormComponent {
       this.form.controls.libroId.setValue(primerLibroActivo.id);
     });
 
-    effect(() => {
-      const libroId = this.form.controls.libroId.value;
-      const libro = this.librosFacade.libros().find((item) => item.id === libroId);
-      if (!libro || this.pedido()) return;
-      this.form.controls.precioCobrado.setValue(libro.precio);
+    this.form.controls.libroId.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.actualizarPrecioSegunLibro();
     });
 
-    effect(() => {
-      const estadoPago = this.form.controls.estadoPago.value;
-      const precio = this.form.controls.precioCobrado.value;
-      if (estadoPago === ESTADO_PAGO.PAGADO) {
-        this.form.controls.montoCobrado.setValue(precio);
-        return;
-      }
+    this.form.controls.estadoPago.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.sincronizarMontoConPago();
+    });
 
-      if (estadoPago === ESTADO_PAGO.PENDIENTE) {
-        this.form.controls.montoCobrado.setValue(0);
-      }
+    this.form.controls.precioCobrado.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.sincronizarMontoConPago();
     });
   }
 
@@ -280,7 +279,7 @@ export class PedidoFormComponent {
   protected mensajeErrorAlumno(): string {
     const control = this.form.controls.alumno;
     if (control.hasError('required')) {
-      return 'Ingresá el nombre del alumno.';
+      return 'Ingresa el nombre del alumno.';
     }
 
     return 'El nombre del alumno debe tener al menos 2 caracteres.';
@@ -327,5 +326,31 @@ export class PedidoFormComponent {
       division: raw.division.trim() || null,
       observaciones: raw.observaciones.trim() || null,
     });
+  }
+
+  private actualizarPrecioSegunLibro(): void {
+    if (this.pedido()) return;
+
+    const libroId = this.form.controls.libroId.value;
+    const libro = this.librosFacade.libros().find((item) => item.id === libroId);
+    if (!libro) return;
+
+    this.form.controls.precioCobrado.setValue(libro.precio);
+  }
+
+  private sincronizarMontoConPago(): void {
+    const estadoPago = this.form.controls.estadoPago.value;
+    const precio = this.form.controls.precioCobrado.value;
+
+    if (estadoPago === ESTADO_PAGO.PAGADO) {
+      if (this.form.controls.montoCobrado.value !== precio) {
+        this.form.controls.montoCobrado.setValue(precio);
+      }
+      return;
+    }
+
+    if (estadoPago === ESTADO_PAGO.PENDIENTE && this.form.controls.montoCobrado.value !== 0) {
+      this.form.controls.montoCobrado.setValue(0);
+    }
   }
 }

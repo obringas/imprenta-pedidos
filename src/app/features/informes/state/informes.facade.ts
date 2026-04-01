@@ -59,6 +59,17 @@ export class InformesFacade {
     return this.pedidosFacade.pedidos().filter((pedido) => pedido.estadoImpresion === 'Pendiente' && (!libroId || pedido.libroId === libroId));
   }
 
+  sinEntregarPorLibro(libroId: string | null): PedidoDetalle[] {
+    return this.pedidosFacade
+      .pedidos()
+      .filter((pedido) => pedido.estadoImpresion === 'Impreso' && pedido.estadoEntrega === 'Pendiente' && (!libroId || pedido.libroId === libroId))
+      .sort((a, b) => a.libroTitulo.localeCompare(b.libroTitulo) || a.alumno.localeCompare(b.alumno));
+  }
+
+  totalSinEntregar(libroId: string | null): number {
+    return this.sinEntregarPorLibro(libroId).length;
+  }
+
   gruposFaltanImprimir(libroId: string | null): GrupoPendiente[] {
     const grupos = new Map<string, GrupoPendiente>();
 
