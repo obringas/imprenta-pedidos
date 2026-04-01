@@ -1,4 +1,4 @@
-﻿import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -10,9 +10,14 @@ import { AuthService } from '../../../core/auth/auth.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="login-shell">
-      <section class="login-card card">
-        <p class="eyebrow">Acceso</p>
-        <h1>Pedidos de imprenta</h1>
+      <section class="login-card card login-brand-card">
+        <div class="login-brand-header">
+          <img src="logo.png" alt="BrujitaCandyBar" class="login-brand-logo" />
+          <div>
+            <p class="eyebrow">BrujitaCandyBar</p>
+            <h1>Pedidos de Impresion</h1>
+          </div>
+        </div>
         <p class="page-description">
           {{ descripcionAcceso() }}
         </p>
@@ -27,10 +32,10 @@ import { AuthService } from '../../../core/auth/auth.service';
           </label>
 
           <label class="field">
-            <span>Contraseña</span>
-            <input type="password" formControlName="password" placeholder="Ingresá tu contraseña" [class.input-invalid]="mostrarError('password')" />
+            <span>Contrasena</span>
+            <input type="password" formControlName="password" placeholder="Ingresa tu contrasena" [class.input-invalid]="mostrarError('password')" />
             @if (mostrarError('password')) {
-              <small class="field-error">Ingresá una contraseña para continuar.</small>
+              <small class="field-error">Ingresa una contrasena para continuar.</small>
             }
           </label>
 
@@ -56,8 +61,8 @@ export class LoginPageComponent {
 
   protected readonly descripcionAcceso = computed(() =>
     this.authService.usandoSupabase()
-      ? 'Ingresá con tu usuario de Supabase para trabajar con los datos reales.'
-      : 'Completá las credenciales de Supabase en environment para activar el login real. Mientras tanto, sigue disponible el modo local.',
+      ? 'Ingresa con tu usuario de Supabase para trabajar con los datos reales.'
+      : 'Completa las credenciales de Supabase en environment para activar el login real. Mientras tanto, sigue disponible el modo local.',
   );
 
   protected mostrarError(campo: 'email' | 'password'): boolean {
@@ -68,10 +73,10 @@ export class LoginPageComponent {
   protected mensajeErrorEmail(): string {
     const control = this.form.controls.email;
     if (control.hasError('required')) {
-      return 'Ingresá un email para continuar.';
+      return 'Ingresa un email para continuar.';
     }
 
-    return 'El email no tiene un formato válido.';
+    return 'El email no tiene un formato valido.';
   }
 
   protected async ingresar(): Promise<void> {

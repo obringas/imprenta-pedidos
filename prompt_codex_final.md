@@ -1,4 +1,4 @@
-﻿# Sistema de GestiÃ³n de Pedidos de ImpresiÃ³n
+# Sistema de GestiÃ³n de Pedidos de ImpresiÃ³n
 ## Prompt completo para Codex
 
 ---
@@ -1213,3 +1213,33 @@ export const environment = {
 - [ ] `Pendiente` Cargar credenciales reales en environment y validar login Supabase
 - [ ] `Pendiente` Implementar repositorio real de informes sobre Supabase
 - [ ] `Pendiente` Validar que libros y pedidos ya salgan de la base real
+---
+
+## 13. ACTUALIZACIÓN FUNCIONAL RECIENTE
+
+Esta sección complementa el prompt original con cambios ya implementados en la aplicación y debe prevalecer cuando haya contradicción con secciones anteriores.
+
+### Pedidos
+- El avance rápido de pago desde listados e informes alterna entre `Pendiente` y `Pagado`.
+- La `Seña` sigue existiendo como opción manual en el formulario, pero no forma parte del flujo rápido principal.
+- En el formulario de alta, `Pagado` es la primera opción visual en el selector de estado de pago.
+- Al crear un pedido, si existen libros activos, el formulario selecciona uno por defecto.
+- Al seleccionar un libro, el precio del libro se copia automáticamente al pedido como valor inicial, pero el usuario puede editarlo.
+- En mobile, el sheet de filtros de pedidos debe mostrar el total real del filtro, no solamente la cantidad visible en la página actual.
+
+### Informes
+- La pestaña `Sin pagar` debe permitir filtrar por libro.
+- La pestaña `Faltan imprimir` debe permitir filtrar por libro.
+- La tabla `Avance por libro` debe incluir además las columnas `Impresos`, `Pagados` y `Por cobrar`.
+
+### Criterio de implementación
+- Si una instrucción anterior del documento describe el avance rápido de pago como `Pendiente -> Seña -> Pagado`, reemplazarla por el comportamiento actual `Pendiente <-> Pagado`.
+- Si una instrucción anterior omite el libro por defecto en alta o el precio inicial editable, tomar esta sección como fuente vigente.
+- Si una instrucción anterior de informes no incluye filtros por libro o las columnas nuevas de avance por libro, esta sección tiene prioridad.
+
+### Plan vivo actualizado
+- [x] `Hecho` Hacer que el avance rápido de pago salte de `Pendiente` a `Pagado`.
+- [x] `Hecho` Seleccionar libro por defecto y precargar precio editable en alta de pedido.
+- [x] `Hecho` Agregar filtro por libro en `Sin pagar`.
+- [x] `Hecho` Agregar filtro por libro en `Faltan imprimir`.
+- [x] `Hecho` Agregar columnas `Impresos`, `Pagados` y `Por cobrar` en `Avance por libro`.
