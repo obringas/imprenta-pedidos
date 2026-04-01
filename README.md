@@ -1,59 +1,59 @@
-# ImprentaPedidos
+arch# ImprentaPedidos
 
-Aplicación Angular para gestionar pedidos de impresión, libros, cobros e informes operativos de una imprenta.
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.1.7.
 
-## Stack
+## Development server
 
-- Angular 19 con standalone components y signals
-- Supabase para datos y autenticación
-- PWA orientada a uso móvil
-
-## Comandos
+To start a local development server, run:
 
 ```bash
-npm install
-npm run start
-npm run build
+ng serve
 ```
 
-## Módulos principales
+Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
-### Pedidos
+## Code scaffolding
 
-- Alta y edición de pedidos por alumno y libro.
-- El libro se selecciona por defecto al crear un pedido si hay libros activos.
-- El precio del libro se copia automáticamente al pedido al seleccionarlo, pero sigue siendo editable.
-- El avance rápido de pago desde listados e informes ahora alterna entre `Pendiente` y `Pagado`.
-- En el formulario de pedido, la opción visual principal de pago es `Pagado`.
-- La gestión de impresión y entrega sigue disponible desde listado, detalle e informes.
-
-### Libros
-
-- Catálogo de libros con precio y cantidad de hojas.
-- Los pedidos conservan su precio aunque después cambie el libro.
-
-### Informes
-
-- Resumen operativo con KPIs generales.
-- Avance por libro con columnas de:
-  - `Total pedidos`
-  - `Impresos`
-  - `Pagados`
-  - `Por cobrar`
-  - `Cerrados`
-  - `Hojas pendientes`
-- Informe `Sin pagar` con filtro por libro.
-- Informe `Faltan imprimir` con filtro por libro.
-
-## Comportamientos recientes
-
-- En móvil, la pantalla de pedidos muestra el total real del filtro y aclara cuántos pedidos se están mostrando en la página actual.
-- Se corrigieron problemas de encoding en textos de la pantalla de pedidos e informes.
-
-## Build verificado
-
-Últimos cambios verificados con:
+Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
 
 ```bash
-npm.cmd run build
+ng generate component component-name
 ```
+
+For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+
+```bash
+ng generate --help
+```
+
+## Building
+
+To build the project run:
+
+```bash
+ng build
+```
+
+This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+
+## Running unit tests
+
+To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+
+```bash
+ng test
+```
+
+## Running end-to-end tests
+
+For end-to-end (e2e) testing, run:
+
+```bash
+ng e2e
+```
+
+Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+
+## Additional Resources
+
+For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

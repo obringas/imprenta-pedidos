@@ -37,7 +37,7 @@ export class InformesFacade {
       totalPedidos: pedidos.length,
       impresos: pedidos.filter((pedido) => pedido.estadoImpresion === 'Impreso').length,
       cobrados: pedidos.filter((pedido) => pedido.estadoPago === 'Pagado').length,
-      montoCobrado: pedidos.reduce((acumulado, pedido) => acumulado + pedido.montoCobrado, 0),
+      montoCobrado: pedidos.reduce((acumulado, pedido) => acumulado + pedido.precioCobrado, 0),
       pendientesCobro: pedidos.filter((pedido) => pedido.saldo > 0).length,
       hojasPendientes,
       saldoTotal: pedidos.reduce((acumulado, pedido) => acumulado + pedido.saldo, 0),
