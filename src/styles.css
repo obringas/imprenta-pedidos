@@ -63,8 +63,8 @@ input, select, textarea { width: 100%; padding: 0.9rem 1rem; border-radius: 0.9r
 .text-danger { color: #b91c1c; }
 .card-meta { display: grid; gap: 0.35rem; justify-items: end; }
 .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 1.25rem; }
-.kpi-card { gap: 0.5rem; }
-.kpi-card strong { font-size: 1.8rem; }
+.kpi-card { gap: 0.5rem; min-width: 0; overflow: hidden; }
+.kpi-card strong { display: block; max-width: 100%; font-size: clamp(1rem, 1.6vw, 1.55rem); line-height: 1.05; letter-spacing: -0.03em; white-space: nowrap; overflow: hidden; text-overflow: clip; }
 .kpi-highlight { background: linear-gradient(135deg, rgba(242, 163, 0, 0.25), rgba(91, 56, 176, 0.14)); }
 .filters-grid, .dashboard-grid, .form-row, .page-header, .card-row, .action-row, .filters-actions, .dialog-actions { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .note-card { background: rgba(255, 247, 237, 0.95); }
