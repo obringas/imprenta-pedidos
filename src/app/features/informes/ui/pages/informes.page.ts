@@ -1,4 +1,4 @@
-﻿import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { LibrosFacade } from '../../../libros/state/libros.facade';
@@ -51,6 +51,9 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
               <tr>
                 <th>Libro</th>
                 <th>Total pedidos</th>
+                <th>Impresos</th>
+                <th>Pagados</th>
+                <th>Por cobrar</th>
                 <th>Cerrados</th>
                 <th>Hojas pend.</th>
                 <th>% cerrado</th>
@@ -61,6 +64,9 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
                 <tr>
                   <td>{{ fila.libroTitulo }}</td>
                   <td>{{ fila.totalPedidos }}</td>
+                  <td>{{ fila.impresos }}</td>
+                  <td>{{ fila.pagados }}</td>
+                  <td>{{ fila.porCobrar }}</td>
                   <td>{{ fila.cerrados }}</td>
                   <td>{{ fila.hojasPendientes }}</td>
                   <td>
@@ -83,7 +89,17 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
           <span class="caption">Pedidos impresos con saldo pendiente</span>
         </div>
 
-        @for (pedido of facade.pendientesPago(); track pedido.id) {
+        <label class="field">
+          <span>Filtrar por libro</span>
+          <select [value]="libroSinPagarId() ?? ''" (change)="libroSinPagarId.set($any($event.target).value || null)">
+            <option value="">Todos</option>
+            @for (libro of librosFacade.activos(); track libro.id) {
+              <option [value]="libro.id">{{ libro.titulo }}</option>
+            }
+          </select>
+        </label>
+
+        @for (pedido of facade.pendientesPagoPorLibro(libroSinPagarId()); track pedido.id) {
           <div class="card-row report-row">
             <div>
               <strong>{{ pedido.alumno }}</strong>
@@ -100,14 +116,26 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
 
         <footer class="report-footer">
           <span>Total saldo pendiente</span>
-          <strong class="text-danger">{{ facade.totalSaldoPendiente() | peso }}</strong>
+          <strong class="text-danger">{{ facade.totalSaldoPendiente(libroSinPagarId()) | peso }}</strong>
         </footer>
       </section>
     }
 
     @if (tabActiva() === 'faltan-imprimir') {
       <section class="stack">
-        @for (grupo of facade.gruposFaltanImprimir(); track grupo.libroId) {
+        <section class="card">
+          <label class="field">
+            <span>Filtrar por libro</span>
+            <select [value]="libroFaltanImprimirId() ?? ''" (change)="libroFaltanImprimirId.set($any($event.target).value || null)">
+              <option value="">Todos</option>
+              @for (libro of librosFacade.activos(); track libro.id) {
+                <option [value]="libro.id">{{ libro.titulo }}</option>
+              }
+            </select>
+          </label>
+        </section>
+
+        @for (grupo of facade.gruposFaltanImprimir(libroFaltanImprimirId()); track grupo.libroId) {
           <details class="card details-card" open>
             <summary class="details-summary">
               <div>
@@ -135,7 +163,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir';
 
         <footer class="report-footer card">
           <span>Total hojas necesarias</span>
-          <strong>{{ facade.totalHojasPendientes() }}</strong>
+          <strong>{{ facade.totalHojasPendientes(libroFaltanImprimirId()) }}</strong>
         </footer>
       </section>
     }
@@ -148,6 +176,8 @@ export class InformesPageComponent {
   private readonly toastService = inject(ToastService);
 
   protected readonly tabActiva = signal<InformeTab>('resumen');
+  protected readonly libroSinPagarId = signal<string | null>(null);
+  protected readonly libroFaltanImprimirId = signal<string | null>(null);
 
   constructor() {
     effect(() => {

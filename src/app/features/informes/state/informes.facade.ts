@@ -1,4 +1,4 @@
-﻿import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { LibrosFacade } from '../../libros/state/libros.facade';
 import { PedidoDetalle } from '../../pedidos/domain/pedido.model';
 import { PedidosFacade } from '../../pedidos/state/pedidos.facade';
@@ -14,6 +14,9 @@ type ResumenLibro = {
   readonly libroId: string;
   readonly libroTitulo: string;
   readonly totalPedidos: number;
+  readonly impresos: number;
+  readonly pagados: number;
+  readonly porCobrar: number;
   readonly cerrados: number;
   readonly porcentajeCerrado: number;
   readonly hojasPendientes: number;
@@ -42,22 +45,24 @@ export class InformesFacade {
     };
   });
 
-  readonly pendientesPago = computed(() =>
-    this.pedidosFacade.pedidos().filter((pedido) => pedido.estadoImpresion === 'Impreso' && pedido.saldo > 0),
-  );
+  pendientesPagoPorLibro(libroId: string | null): PedidoDetalle[] {
+    return this.pedidosFacade
+      .pedidos()
+      .filter((pedido) => pedido.estadoImpresion === 'Impreso' && pedido.saldo > 0 && (!libroId || pedido.libroId === libroId));
+  }
 
-  readonly totalSaldoPendiente = computed(() =>
-    this.pendientesPago().reduce((acumulado, pedido) => acumulado + pedido.saldo, 0),
-  );
+  totalSaldoPendiente(libroId: string | null): number {
+    return this.pendientesPagoPorLibro(libroId).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
+  }
 
-  readonly faltanImprimir = computed(() =>
-    this.pedidosFacade.pedidos().filter((pedido) => pedido.estadoImpresion === 'Pendiente'),
-  );
+  faltanImprimirPorLibro(libroId: string | null): PedidoDetalle[] {
+    return this.pedidosFacade.pedidos().filter((pedido) => pedido.estadoImpresion === 'Pendiente' && (!libroId || pedido.libroId === libroId));
+  }
 
-  readonly gruposFaltanImprimir = computed<GrupoPendiente[]>(() => {
+  gruposFaltanImprimir(libroId: string | null): GrupoPendiente[] {
     const grupos = new Map<string, GrupoPendiente>();
 
-    for (const pedido of this.faltanImprimir()) {
+    for (const pedido of this.faltanImprimirPorLibro(libroId)) {
       const actual = grupos.get(pedido.libroId);
 
       if (!actual) {
@@ -78,17 +83,20 @@ export class InformesFacade {
     }
 
     return [...grupos.values()].sort((a, b) => a.libroTitulo.localeCompare(b.libroTitulo));
-  });
+  }
 
-  readonly totalHojasPendientes = computed(() =>
-    this.gruposFaltanImprimir().reduce((acumulado, grupo) => acumulado + grupo.hojasTotales, 0),
-  );
+  totalHojasPendientes(libroId: string | null): number {
+    return this.gruposFaltanImprimir(libroId).reduce((acumulado, grupo) => acumulado + grupo.hojasTotales, 0);
+  }
 
   readonly resumenPorLibro = computed<ResumenLibro[]>(() => {
     const pedidos = this.pedidosFacade.pedidos();
 
     return this.librosFacade.libros().map((libro) => {
       const pedidosLibro = pedidos.filter((pedido) => pedido.libroId === libro.id);
+      const impresos = pedidosLibro.filter((pedido) => pedido.estadoImpresion === 'Impreso').length;
+      const pagados = pedidosLibro.filter((pedido) => pedido.estadoPago === 'Pagado').length;
+      const porCobrar = pedidosLibro.filter((pedido) => pedido.saldo > 0).length;
       const cerrados = pedidosLibro.filter((pedido) => pedido.estadoGeneral === 'Cerrado').length;
       const totalPedidos = pedidosLibro.length;
       const porcentajeCerrado = totalPedidos === 0 ? 0 : Math.round((cerrados / totalPedidos) * 100);
@@ -100,6 +108,9 @@ export class InformesFacade {
         libroId: libro.id,
         libroTitulo: libro.titulo,
         totalPedidos,
+        impresos,
+        pagados,
+        porCobrar,
         cerrados,
         porcentajeCerrado,
         hojasPendientes,

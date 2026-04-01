@@ -1,4 +1,4 @@
-﻿import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output } from '@angular/core';
 import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   ESTADO_ENTREGA,
@@ -69,14 +69,14 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
         </div>
 
         <div class="segmented-control">
+          <button type="button" class="segment-button" [class.segment-button-active]="form.controls.estadoPago.value === ESTADO_PAGO.PAGADO" (click)="setEstadoPago(ESTADO_PAGO.PAGADO)">
+            Pagado
+          </button>
           <button type="button" class="segment-button" [class.segment-button-active]="form.controls.estadoPago.value === ESTADO_PAGO.PENDIENTE" (click)="setEstadoPago(ESTADO_PAGO.PENDIENTE)">
             Pendiente
           </button>
           <button type="button" class="segment-button" [class.segment-button-active]="form.controls.estadoPago.value === ESTADO_PAGO.SENA" (click)="setEstadoPago(ESTADO_PAGO.SENA)">
             Seña
-          </button>
-          <button type="button" class="segment-button" [class.segment-button-active]="form.controls.estadoPago.value === ESTADO_PAGO.PAGADO" (click)="setEstadoPago(ESTADO_PAGO.PAGADO)">
-            Pagado
           </button>
         </div>
 
@@ -243,6 +243,12 @@ export class PedidoFormComponent {
         estadoEntrega: pedido.estadoEntrega,
         observaciones: pedido.observaciones ?? '',
       });
+    });
+
+    effect(() => {
+      const primerLibroActivo = this.librosFacade.activos()[0];
+      if (!primerLibroActivo || this.pedido() || this.form.controls.libroId.value) return;
+      this.form.controls.libroId.setValue(primerLibroActivo.id);
     });
 
     effect(() => {

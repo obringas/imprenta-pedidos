@@ -1,4 +1,4 @@
-﻿import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { AppError } from '../../../shared/errors/app-error';
 import { Result } from '../../../shared/utils/result';
 import { LibrosFacade } from '../../libros/state/libros.facade';
@@ -107,8 +107,8 @@ export class PedidosFacade {
   }
 
   async avanzarPago(pedido: PedidoDetalle): Promise<void> {
-    const siguienteEstado = pedido.estadoPago === 'Pendiente' ? 'Seña' : pedido.estadoPago === 'Seña' ? 'Pagado' : 'Pendiente';
-    const siguienteMonto = siguienteEstado === 'Pagado' ? pedido.precioCobrado : siguienteEstado === 'Seña' ? Math.max(Math.round(pedido.precioCobrado / 2), 1) : 0;
+    const siguienteEstado = pedido.estadoPago === 'Pagado' ? 'Pendiente' : 'Pagado';
+    const siguienteMonto = siguienteEstado === 'Pagado' ? pedido.precioCobrado : 0;
 
     await this.actualizarPedido(pedido.id, {
       libroId: pedido.libroId,
