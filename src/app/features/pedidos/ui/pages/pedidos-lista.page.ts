@@ -17,7 +17,7 @@ import { PedidosFacade } from '../../state/pedidos.facade';
   template: `
     <section class="page-header pedidos-header">
       <div>
-        <p class="eyebrow">Operación</p>
+        <p class="eyebrow">OperaciÃ³n</p>
         <h1>Pedidos</h1>
         <p class="page-description">Listado priorizado por estado general para resolver primero lo urgente.</p>
       </div>
@@ -50,7 +50,7 @@ import { PedidosFacade } from '../../state/pedidos.facade';
           @for (filtro of filtrosActivos(); track filtro.label) {
             <button type="button" class="filter-chip filter-chip-active filter-chip-removable" (click)="filtro.clear()">
               <span>{{ filtro.label }}</span>
-              <span aria-hidden="true">×</span>
+              <span aria-hidden="true">Ã—</span>
             </button>
           }
         </div>
@@ -204,7 +204,7 @@ import { PedidosFacade } from '../../state/pedidos.facade';
                   <td><strong [class.text-danger]="pedido.saldo > 0">{{ pedido.saldo | peso }}</strong></td>
                   <td>
                     <div class="table-actions">
-                      <button type="button" class="secondary-button" (click)="toggleImpresion(pedido)">Impresión</button>
+                      <button type="button" class="secondary-button" (click)="toggleImpresion(pedido)">ImpresiÃ³n</button>
                       <button type="button" class="secondary-button" (click)="avanzarPago(pedido)">Pago</button>
                       <button type="button" class="secondary-button" (click)="toggleEntrega(pedido)">Entrega</button>
                     </div>
@@ -222,7 +222,7 @@ import { PedidosFacade } from '../../state/pedidos.facade';
             <div class="card-row">
               <div>
                 <a [routerLink]="['/pedidos', pedido.id]" class="card-title">{{ pedido.alumno }}</a>
-                <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }}</p>
+                <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? 'â€¢ ' + pedido.division : '' }}</p>
               </div>
               <strong [class.text-danger]="pedido.saldo > 0">{{ pedido.saldo | peso }}</strong>
             </div>
@@ -248,12 +248,12 @@ import { PedidosFacade } from '../../state/pedidos.facade';
       @if (totalPaginas() > 1) {
         <section class="card pagination-bar">
           <button type="button" class="secondary-button" (click)="irPagina(actualPagina() - 1)" [disabled]="actualPagina() === 1">Anterior</button>
-          <span class="caption">Mostrando {{ pedidosPaginados().length }} de {{ totalPedidosFiltrados() }} pedidos · Página {{ actualPagina() }} de {{ totalPaginas() }}</span>
+          <span class="caption">Mostrando {{ pedidosPaginados().length }} de {{ totalPedidosFiltrados() }} pedidos Â· PÃ¡gina {{ actualPagina() }} de {{ totalPaginas() }}</span>
           <button type="button" class="secondary-button" (click)="irPagina(actualPagina() + 1)" [disabled]="actualPagina() === totalPaginas()">Siguiente</button>
         </section>
       }
     } @else {
-      <app-empty-state title="No hay pedidos para esos filtros" description="Probá otra búsqueda o cargá un pedido nuevo." />
+      <app-empty-state title="No hay pedidos para esos filtros" description="ProbÃ¡ otra bÃºsqueda o cargÃ¡ un pedido nuevo." />
     }
 
     <a routerLink="/pedidos/nuevo" class="fab-button fab-button-pedidos mobile-only-fab" aria-label="Crear pedido nuevo">+</a>
@@ -377,9 +377,9 @@ export class PedidosListaPageComponent {
   protected async toggleImpresion(pedido: PedidoDetalle): Promise<void> {
     try {
       await this.facade.toggleImpresion(pedido);
-      this.toastService.success('Estado de impresión actualizado.');
+      this.toastService.success('Estado de impresiÃ³n actualizado.');
     } catch {
-      this.toastService.error('No se pudo actualizar la impresión.');
+      this.toastService.error('No se pudo actualizar la impresiÃ³n.');
     }
   }
 
@@ -401,4 +401,5 @@ export class PedidosListaPageComponent {
     }
   }
 }
+
 
