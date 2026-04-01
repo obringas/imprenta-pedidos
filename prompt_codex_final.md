@@ -1225,21 +1225,29 @@ Esta sección complementa el prompt original con cambios ya implementados en la 
 - En el formulario de alta, `Pagado` es la primera opción visual en el selector de estado de pago.
 - Al crear un pedido, si existen libros activos, el formulario selecciona uno por defecto.
 - Al seleccionar un libro, el precio del libro se copia automáticamente al pedido como valor inicial, pero el usuario puede editarlo.
+- Si el usuario cambia de libro durante el alta, el formulario debe refrescar `Precio`, `Monto cobrado` y `Saldo` según el libro seleccionado y el estado de pago actual.
 - En mobile, el sheet de filtros de pedidos debe mostrar el total real del filtro, no solamente la cantidad visible en la página actual.
 
 ### Informes
 - La pestaña `Sin pagar` debe permitir filtrar por libro.
 - La pestaña `Faltan imprimir` debe permitir filtrar por libro.
+- La pestaña `Sin entregar` debe existir como informe operativo para listar pedidos impresos pendientes de entrega y permitir marcarlos como entregados directamente desde informes.
+- Los informes `Sin pagar`, `Faltan imprimir` y `Sin entregar` deben compartir filtros opcionales de `Libro` y `Alumno`, acumulables entre sí.
+- El resumen de informes debe mostrar también el KPI `Total cobrado`, además de `Saldo total`.
 - La tabla `Avance por libro` debe incluir además las columnas `Impresos`, `Pagados` y `Por cobrar`.
 
 ### Criterio de implementación
 - Si una instrucción anterior del documento describe el avance rápido de pago como `Pendiente -> Seña -> Pagado`, reemplazarla por el comportamiento actual `Pendiente <-> Pagado`.
-- Si una instrucción anterior omite el libro por defecto en alta o el precio inicial editable, tomar esta sección como fuente vigente.
-- Si una instrucción anterior de informes no incluye filtros por libro o las columnas nuevas de avance por libro, esta sección tiene prioridad.
+- Si una instrucción anterior omite el libro por defecto en alta, el precio inicial editable o la resincronización de precio/saldo al cambiar de libro, tomar esta sección como fuente vigente.
+- Si una instrucción anterior de informes no incluye filtros compartidos por libro/alumno, el informe `Sin entregar`, el KPI `Total cobrado` o las columnas nuevas de avance por libro, esta sección tiene prioridad.
 
 ### Plan vivo actualizado
 - [x] `Hecho` Hacer que el avance rápido de pago salte de `Pendiente` a `Pagado`.
 - [x] `Hecho` Seleccionar libro por defecto y precargar precio editable en alta de pedido.
 - [x] `Hecho` Agregar filtro por libro en `Sin pagar`.
 - [x] `Hecho` Agregar filtro por libro en `Faltan imprimir`.
+- [x] `Hecho` Agregar informe `Sin entregar` con acción directa para marcar entregado.
+- [x] `Hecho` Compartir filtros de `Libro` y `Alumno` entre `Sin pagar`, `Faltan imprimir` y `Sin entregar`.
+- [x] `Hecho` Agregar KPI `Total cobrado` al resumen de informes.
+- [x] `Hecho` Resincronizar `Precio`, `Monto cobrado` y `Saldo` al cambiar de libro en el alta de pedido.
 - [x] `Hecho` Agregar columnas `Impresos`, `Pagados` y `Por cobrar` en `Avance por libro`.

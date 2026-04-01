@@ -45,35 +45,48 @@ export class InformesFacade {
     };
   });
 
-  pendientesPagoPorLibro(libroId: string | null): PedidoDetalle[] {
+  pendientesPagoPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
     return this.pedidosFacade
       .pedidos()
-      .filter((pedido) => pedido.estadoImpresion === 'Impreso' && pedido.saldo > 0 && (!libroId || pedido.libroId === libroId));
-  }
-
-  totalSaldoPendiente(libroId: string | null): number {
-    return this.pendientesPagoPorLibro(libroId).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
-  }
-
-  faltanImprimirPorLibro(libroId: string | null): PedidoDetalle[] {
-    return this.pedidosFacade.pedidos().filter((pedido) => pedido.estadoImpresion === 'Pendiente' && (!libroId || pedido.libroId === libroId));
-  }
-
-  sinEntregarPorLibro(libroId: string | null): PedidoDetalle[] {
-    return this.pedidosFacade
-      .pedidos()
-      .filter((pedido) => pedido.estadoImpresion === 'Impreso' && pedido.estadoEntrega === 'Pendiente' && (!libroId || pedido.libroId === libroId))
+      .filter(
+        (pedido) =>
+          pedido.estadoImpresion === 'Impreso' &&
+          pedido.saldo > 0 &&
+          this.coincideFiltros(pedido, libroId, busquedaAlumno),
+      )
       .sort((a, b) => a.libroTitulo.localeCompare(b.libroTitulo) || a.alumno.localeCompare(b.alumno));
   }
 
-  totalSinEntregar(libroId: string | null): number {
-    return this.sinEntregarPorLibro(libroId).length;
+  totalSaldoPendiente(libroId: string | null, busquedaAlumno: string): number {
+    return this.pendientesPagoPorLibro(libroId, busquedaAlumno).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
   }
 
-  gruposFaltanImprimir(libroId: string | null): GrupoPendiente[] {
+  faltanImprimirPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
+    return this.pedidosFacade
+      .pedidos()
+      .filter((pedido) => pedido.estadoImpresion === 'Pendiente' && this.coincideFiltros(pedido, libroId, busquedaAlumno));
+  }
+
+  sinEntregarPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
+    return this.pedidosFacade
+      .pedidos()
+      .filter(
+        (pedido) =>
+          pedido.estadoImpresion === 'Impreso' &&
+          pedido.estadoEntrega === 'Pendiente' &&
+          this.coincideFiltros(pedido, libroId, busquedaAlumno),
+      )
+      .sort((a, b) => a.libroTitulo.localeCompare(b.libroTitulo) || a.alumno.localeCompare(b.alumno));
+  }
+
+  totalSinEntregar(libroId: string | null, busquedaAlumno: string): number {
+    return this.sinEntregarPorLibro(libroId, busquedaAlumno).length;
+  }
+
+  gruposFaltanImprimir(libroId: string | null, busquedaAlumno: string): GrupoPendiente[] {
     const grupos = new Map<string, GrupoPendiente>();
 
-    for (const pedido of this.faltanImprimirPorLibro(libroId)) {
+    for (const pedido of this.faltanImprimirPorLibro(libroId, busquedaAlumno)) {
       const actual = grupos.get(pedido.libroId);
 
       if (!actual) {
@@ -96,8 +109,8 @@ export class InformesFacade {
     return [...grupos.values()].sort((a, b) => a.libroTitulo.localeCompare(b.libroTitulo));
   }
 
-  totalHojasPendientes(libroId: string | null): number {
-    return this.gruposFaltanImprimir(libroId).reduce((acumulado, grupo) => acumulado + grupo.hojasTotales, 0);
+  totalHojasPendientes(libroId: string | null, busquedaAlumno: string): number {
+    return this.gruposFaltanImprimir(libroId, busquedaAlumno).reduce((acumulado, grupo) => acumulado + grupo.hojasTotales, 0);
   }
 
   readonly resumenPorLibro = computed<ResumenLibro[]>(() => {
@@ -129,4 +142,11 @@ export class InformesFacade {
       };
     });
   });
+
+  private coincideFiltros(pedido: PedidoDetalle, libroId: string | null, busquedaAlumno: string): boolean {
+    const coincideLibro = !libroId || pedido.libroId === libroId;
+    const texto = busquedaAlumno.trim().toLowerCase();
+    const coincideAlumno = !texto || pedido.alumno.toLowerCase().includes(texto);
+    return coincideLibro && coincideAlumno;
+  }
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { LibrosFacade } from '../../../libros/state/libros.facade';
@@ -28,6 +28,32 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
       <button type="button" class="tab-button" [class.tab-button-active]="tabActiva() === 'faltan-imprimir'" (click)="tabActiva.set('faltan-imprimir')">Faltan imprimir</button>
       <button type="button" class="tab-button" [class.tab-button-active]="tabActiva() === 'sin-entregar'" (click)="tabActiva.set('sin-entregar')">Sin entregar</button>
     </section>
+
+    @if (tabActiva() !== 'resumen') {
+      <section class="card stack">
+        <div class="filters-grid">
+          <label class="field">
+            <span>Buscar alumno</span>
+            <input type="text" [value]="busquedaAlumno()" (input)="busquedaAlumno.set($any($event.target).value)" />
+          </label>
+
+          <label class="field">
+            <span>Libro</span>
+            <select [value]="libroFiltroId() ?? ''" (change)="libroFiltroId.set($any($event.target).value || null)">
+              <option value="">Todos</option>
+              @for (libro of librosFacade.activos(); track libro.id) {
+                <option [value]="libro.id">{{ libro.titulo }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="filters-actions">
+          <button type="button" class="secondary-button" (click)="limpiarFiltros()">Limpiar filtros</button>
+          <span class="caption">{{ totalItemsFiltrados() }} resultados</span>
+        </div>
+      </section>
+    }
 
     @if (tabActiva() === 'resumen') {
       <section class="stack">
@@ -90,17 +116,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
           <span class="caption">Pedidos impresos con saldo pendiente</span>
         </div>
 
-        <label class="field">
-          <span>Filtrar por libro</span>
-          <select [value]="libroSinPagarId() ?? ''" (change)="libroSinPagarId.set($any($event.target).value || null)">
-            <option value="">Todos</option>
-            @for (libro of librosFacade.activos(); track libro.id) {
-              <option [value]="libro.id">{{ libro.titulo }}</option>
-            }
-          </select>
-        </label>
-
-        @for (pedido of facade.pendientesPagoPorLibro(libroSinPagarId()); track pedido.id) {
+        @for (pedido of facade.pendientesPagoPorLibro(libroFiltroId(), busquedaAlumno()); track pedido.id) {
           <div class="card-row report-row">
             <div>
               <strong>{{ pedido.alumno }}</strong>
@@ -117,26 +133,14 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
 
         <footer class="report-footer">
           <span>Total saldo pendiente</span>
-          <strong class="text-danger">{{ facade.totalSaldoPendiente(libroSinPagarId()) | peso }}</strong>
+          <strong class="text-danger">{{ facade.totalSaldoPendiente(libroFiltroId(), busquedaAlumno()) | peso }}</strong>
         </footer>
       </section>
     }
 
     @if (tabActiva() === 'faltan-imprimir') {
       <section class="stack">
-        <section class="card">
-          <label class="field">
-            <span>Filtrar por libro</span>
-            <select [value]="libroFaltanImprimirId() ?? ''" (change)="libroFaltanImprimirId.set($any($event.target).value || null)">
-              <option value="">Todos</option>
-              @for (libro of librosFacade.activos(); track libro.id) {
-                <option [value]="libro.id">{{ libro.titulo }}</option>
-              }
-            </select>
-          </label>
-        </section>
-
-        @for (grupo of facade.gruposFaltanImprimir(libroFaltanImprimirId()); track grupo.libroId) {
+        @for (grupo of facade.gruposFaltanImprimir(libroFiltroId(), busquedaAlumno()); track grupo.libroId) {
           <details class="card details-card" open>
             <summary class="details-summary">
               <div>
@@ -164,7 +168,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
 
         <footer class="report-footer card">
           <span>Total hojas necesarias</span>
-          <strong>{{ facade.totalHojasPendientes(libroFaltanImprimirId()) }}</strong>
+          <strong>{{ facade.totalHojasPendientes(libroFiltroId(), busquedaAlumno()) }}</strong>
         </footer>
       </section>
     }
@@ -176,17 +180,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
           <span class="caption">Pedidos impresos y todavia pendientes de entrega</span>
         </div>
 
-        <label class="field">
-          <span>Filtrar por libro</span>
-          <select [value]="libroSinEntregarId() ?? ''" (change)="libroSinEntregarId.set($any($event.target).value || null)">
-            <option value="">Todos</option>
-            @for (libro of librosFacade.activos(); track libro.id) {
-              <option [value]="libro.id">{{ libro.titulo }}</option>
-            }
-          </select>
-        </label>
-
-        @for (pedido of facade.sinEntregarPorLibro(libroSinEntregarId()); track pedido.id) {
+        @for (pedido of facade.sinEntregarPorLibro(libroFiltroId(), busquedaAlumno()); track pedido.id) {
           <div class="card-row report-row">
             <div>
               <strong>{{ pedido.alumno }}</strong>
@@ -203,7 +197,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
 
         <footer class="report-footer">
           <span>Total pendientes de entrega</span>
-          <strong>{{ facade.totalSinEntregar(libroSinEntregarId()) }}</strong>
+          <strong>{{ facade.totalSinEntregar(libroFiltroId(), busquedaAlumno()) }}</strong>
         </footer>
       </section>
     }
@@ -216,15 +210,34 @@ export class InformesPageComponent {
   private readonly toastService = inject(ToastService);
 
   protected readonly tabActiva = signal<InformeTab>('resumen');
-  protected readonly libroSinPagarId = signal<string | null>(null);
-  protected readonly libroFaltanImprimirId = signal<string | null>(null);
-  protected readonly libroSinEntregarId = signal<string | null>(null);
+  protected readonly libroFiltroId = signal<string | null>(null);
+  protected readonly busquedaAlumno = signal('');
+  protected readonly totalItemsFiltrados = computed(() => {
+    if (this.tabActiva() === 'sin-pagar') {
+      return this.facade.pendientesPagoPorLibro(this.libroFiltroId(), this.busquedaAlumno()).length;
+    }
+
+    if (this.tabActiva() === 'faltan-imprimir') {
+      return this.facade.faltanImprimirPorLibro(this.libroFiltroId(), this.busquedaAlumno()).length;
+    }
+
+    if (this.tabActiva() === 'sin-entregar') {
+      return this.facade.sinEntregarPorLibro(this.libroFiltroId(), this.busquedaAlumno()).length;
+    }
+
+    return 0;
+  });
 
   constructor() {
     effect(() => {
       void this.librosFacade.cargar();
       void this.pedidosFacade.cargar();
     });
+  }
+
+  protected limpiarFiltros(): void {
+    this.libroFiltroId.set(null);
+    this.busquedaAlumno.set('');
   }
 
   protected async marcarPagado(pedido: PedidoDetalle): Promise<void> {
