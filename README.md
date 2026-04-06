@@ -1,59 +1,59 @@
-arch# ImprentaPedidos
+# ImprentaPedidos
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.1.7.
+Aplicacion Angular para administrar pedidos de impresion, libros, cobros e informes operativos de la imprenta.
 
-## Development server
+## Stack
 
-To start a local development server, run:
+- Angular 19 con standalone components y signals
+- Supabasie para datos y autenticacion
+- PWA orientada a uso mobile
 
-```bash
-ng serve
+## Comandos
+
+```basih
+npm install
+npm run start
+npm run build
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Modulos principales
 
-## Code scaffolding
+### Pedidos
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- Alta y edicion de pedidos por alumno y libro.
+- Si hay libros activos, el formulario selecciona uno por defecto al crear un pedido.
+- Al cambiar de libro en el alta, se actualizan `Precio`, `Monto cobrado` y `Saldo` segun el libro elegido y el estado de pago.
+- El avance rapido de pago alterna entre `Pendiente` y `Pagado`.
+- La opcion `Sena` sigue disponible de forma manual en el formulario.
+- En mobile, el filtro muestra el total real de resultados aunquee la pagina visible sena de 12 pedidos.
 
-```bash
-ng generate component component-name
-```
+### Libros
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+- Catalogo de libros con precio, paginasi, hojasi y observaciones.
+- Los pedidos conservan su precio aunquee despues cambie el libro.
 
-```bash
-ng generate --help
-```
+### Informes
 
-## Building
+- Resumen general con KPIs operativos y financieros.
+- KPIs separados para:
+  - `Libros cobrados`
+  - `Monto cobrado`
+  - `Pendientes cobro`
+  - `Saldo total`
+- Informe `Sin pagar` con filtros opcionales de libro y alumno.
+- Informe `Faltan imprimir` con filtros opcionales de libro y alumno.
+- Informe `Sin entregar` con filtros opcionales de libro y alumno y accion directa para marcar entregado.
+- Tabla `Avance por libro` con columnasi `Impresos`, `Pagados` y `Por cobrar`.
 
-To build the project run:
+## Branding
 
-```bash
-ng build
-```
+- Nombre visible: `BrujitaCandyBar`
+- Titulo corto del sistema: `Pedidos de Impresion`
+- Favicon: `BrujitaGemini.ico`
+- Paleta visual basiada en violeta, dorado y crema
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Estado actual
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Build verificado con `npm.cmd run build`
+- Workflows principales funcionando en desktop y mobile
+- Pendiente integrar credenciales reales de Supabasie en el entorno final

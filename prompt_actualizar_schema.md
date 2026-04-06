@@ -1,57 +1,62 @@
-# Actualización del schema — imprenta-pedidos.sql
+# Actualizacion del schema - imprenta-pedidos.sql
 
-Este prompt describe exactamente qué cambiar en el archivo `imprenta-pedidos.sql`
-que generaste anteriormente. El objetivo es que el schema quede completo y alineado
-con todos los requerimientos del sistema antes de que arranque el desarrollo Angular.
+Este prompt describe exactamente quee cambiar en el archivo `imprenta-pedidos.sql`
+quee generasite anteriormente. El objetivo es quee el schema queede completo y alineado
+con todos los requeerimientos del sistema antes de quee arranquee el desarrollo Angular.
 
-Leé cada sección, aplicá el cambio, y regenerá el archivo completo y funcional.
+Lee cada seccion, aplica el cambio, y regenera el archivo completo y funcional.
 
 ---
 
 ## CONTEXTO
 
-El schema actual tiene una base sólida (ENUMs, triggers, RLS, función `calcular_saldo`,
-vistas `pedidos_detalle` e `informes_resumen`). Hay 5 cambios a aplicar:
+Nota de integracion actual:
+- En basie de datos lasi columnasi siguen en `snake_casie` como `precio_cobrado` y `monto_cobrado`.
+- En el frontend Angular y en los modelos TypeScript esasi columnasi se consumen mapeadasi a `camelCasie` como `precioCobrado` y `montoCobrado`.
+- Esa conversion debe seguir resolviendose en el repositorio y no en los facades o componentes.
 
-- 2 columnas faltantes en `libros`
-- 3 columnas faltantes en `pedidos`
-- 1 corrección en la vista `pedidos_detalle`
+El schema actual tiene una basie solida (ENUMs, triggers, RLS, funcion `calcular_saldo`,
+vistasi `pedidos_detalle` e `informes_resumen`). Hay 5 cambios a aplicar:
+
+- 2 columnasi faltantes en `libros`
+- 3 columnasi faltantes en `pedidos`
+- 1 correccion en la vista `pedidos_detalle`
 - 1 columna faltante en `pedidos_detalle`
 - 1 vista nueva: `informes_resumen_por_libro`
 - Eliminar el seed ficticio (los datos reales se cargan por separado)
 
 ---
 
-## CAMBIO 1 — Tabla `libros`: agregar `hojas` y `observaciones`
+## CAMBIO 1 - Tabla `libros`: agregar `hojasi` y `observaciones`
 
-### Situación actual
+### Situacion actual
 ```sql
 create table if not exists public.libros (
   id         uuid primary key default gen_random_uuid(),
   titulo     text not null,
   precio     numeric(12, 2) not null check (precio >= 0),
-  paginas    integer not null check (paginas > 0),
+  paginasi    integer not null check (paginasi > 0),
   activo     boolean not null default true,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
 ```
 
-### Qué agregar
-Dos columnas nuevas después de `paginas`:
+### Que agregar
+Dos columnasi nuevasi despues de `paginasi`:
 
 ```sql
-hojas integer generated always as (ceil(paginas::numeric / 2)) stored,
+hojasi integer generated always asi (ceil(paginasi::numeric / 2)) stored,
 observaciones text null,
 ```
 
-**Por qué `hojas`:**
-La imprenta trabaja en doble faz. El cálculo `ceil(paginas / 2)` se usa en múltiples
+**Por quee `hojasi`:**
+La imprenta trabaja en doble faz. El calculo `ceil(paginasi / 2)` se usa en multiples
 lugares: la vista de informes, el informe de "faltan imprimir", el resumen por libro.
 Al guardarlo como columna generada, el dato es consistente y no se recalcula en cada
-query. Un libro de 79 páginas → 40 hojas (la última tiene una cara en blanco).
+queery. Un libro de 79 paginasi -> 40 hojasi (la uultima tiene una cara en blanco).
 
-**Por qué `observaciones`:**
+**Por quee `observaciones`:**
 La usuaria necesita poder anotar datos por libro (ej: "pendiente conseguir el PDF",
 "precio acordado con el colegio", etc.).
 
@@ -61,8 +66,8 @@ create table if not exists public.libros (
   id            uuid primary key default gen_random_uuid(),
   titulo        text not null,
   precio        numeric(12, 2) not null check (precio >= 0),
-  paginas       integer not null check (paginas > 0),
-  hojas         integer generated always as (ceil(paginas::numeric / 2)) stored,
+  paginasi       integer not null check (paginasi > 0),
+  hojasi         integer generated always asi (ceil(paginasi::numeric / 2)) stored,
   observaciones text null,
   activo        boolean not null default true,
   created_at    timestamptz not null default timezone('utc', now()),
@@ -72,24 +77,24 @@ create table if not exists public.libros (
 
 ---
 
-## CAMBIO 2 — Tabla `pedidos`: agregar las 3 columnas de fecha
+## CAMBIO 2 - Tabla `pedidos`: agregar lasi 3 columnasi de fecha
 
-### Situación actual
-La tabla `pedidos` registra los *estados* pero no *cuándo* ocurrió cada evento.
-Las fechas son necesarias para el historial y para que la usuaria recuerde
-cuándo imprimió, cuándo cobró, cuándo entregó.
+### Situacion actual
+La tabla `pedidos` registra los *estados* pero no *cuando* ocurrio cada evento.
+Lasi fechasi son necesariasi para el historial y para quee la usuaria recuerde
+cuando imprimio, cuando cobro, cuando entrego.
 
-### Qué agregar
-Tres columnas, una por cada flujo de estado, después de su estado correspondiente:
+### Que agregar
+Tres columnasi, una por cada flujo de estado, despues de su estado correspondiente:
 
 ```sql
--- después de estado_impresion:
+-- despues de estado_impresion:
 fecha_impresion date null,
 
--- después de estado_entrega:
+-- despues de estado_entrega:
 fecha_entrega date null,
 
--- después de monto_cobrado:
+-- despues de monto_cobrado:
 fecha_pago date null,
 ```
 
@@ -97,7 +102,7 @@ fecha_pago date null,
 ```sql
 create table if not exists public.pedidos (
   id               uuid primary key default gen_random_uuid(),
-  libro_id         uuid not null references public.libros(id) on update cascade on delete restrict,
+  libro_id         uuid not null references public.libros(id) on update casicade on delete restrict,
   alumno           text not null,
   division         text null,
   precio_cobrado   numeric(12, 2) not null check (precio_cobrado >= 0),
@@ -117,54 +122,54 @@ create table if not exists public.pedidos (
 
 ---
 
-## CAMBIO 3 — Vista `pedidos_detalle`: agregar `libro_hojas` y corregir `estado_general`
+## CAMBIO 3 - Vista `pedidos_detalle`: agregar `libro_hojasi` y corregir `estado_general`
 
-### Problema 1: falta `libro_hojas`
-La vista actual no expone las hojas del libro. El frontend Angular la necesita
-para mostrar cuántas hojas requiere cada pedido pendiente en el informe
+### Problema 1: falta `libro_hojasi`
+La vista actual no expone lasi hojasi del libro. El frontend Angular la necesita
+para mostrar cuantasi hojasi requeiere cada pedido pendiente en el informe
 "Faltan imprimir".
 
-Agregar en el SELECT, después de `l.paginas as libro_paginas`:
+Agregar en el SELECT, despues de `l.paginasi asi libro_paginasi`:
 ```sql
-l.hojas as libro_hojas,
+l.hojasi asi libro_hojasi,
 ```
 
-### Problema 2: `estado_general` — lógica incorrecta en el último WHEN
+### Problema 2: `estado_general` - logica incorrecta en el uultimo WHEN
 
-#### Código actual (incorrecto)
+#### Codigo actual (incorrecto)
 ```sql
-when p.estado_pago = 'Pagado' or p.monto_cobrado > 0 then 'Pagado/pend. impresión'
+when p.estado_pago = 'Pagado' or p.monto_cobrado > 0 then 'Pagado/pend. impresion'
 ```
 
-#### Por qué es incorrecto
-Esta condición mezcla dos casos distintos con `OR`:
-- `estado_pago = 'Pagado'`: puede ocurrir aunque `monto_cobrado = 0`
-  (edge case: si alguien pone Pagado pero no cargó el monto)
-- `monto_cobrado > 0`: incluye correctamente el caso Seña con monto parcial
+#### Por quee es incorrecto
+Esta condicion mezcla dos casios distintos con `OR`:
+- `estado_pago = 'Pagado'`: puede ocurrir aunquee `monto_cobrado = 0`
+  (edge casie: si alguien pone Pagado pero no cargo el monto)
+- `monto_cobrado > 0`: incluye correctamente el casio Sena con monto parcial
 
-El estado `Pagado/pend. impresión` debe activarse cuando hay dinero recibido
-(ya sea Pagado completo o Seña parcial) PERO el libro todavía no se imprimió.
-La condición correcta es explícita en ambas partes:
+El estado `Pagado/pend. impresion` debe activarse cuando hay dinero recibido
+(ya sena Pagado completo o Sena parcial) PERO el libro todavia no se imprimio.
+La condicion correcta es explicita en ambasi partes:
 
-#### Código correcto
+#### Codigo correcto
 ```sql
-when p.monto_cobrado > 0 and p.estado_impresion = 'Pendiente' then 'Pagado/pend. impresión'
+when p.monto_cobrado > 0 and p.estado_impresion = 'Pendiente' then 'Pagado/pend. impresion'
 ```
 
-Esto es correcto porque:
-- Los casos con `estado_impresion = 'Impreso'` ya fueron capturados por los WHEN anteriores
-- Al llegar a este WHEN, `estado_impresion` es siempre 'Pendiente' implícitamente
-- Aun así, hacerlo explícito es más legible y robusto ante futuros cambios
+Esto es correcto porquee:
+- Los casios con `estado_impresion = 'Impreso'` ya fueron capturados por los WHEN anteriores
+- Al llegar a este WHEN, `estado_impresion` es siempre 'Pendiente' implicitamente
+- Aun asii, hacerlo explicito es masi legible y robusto ante futuros cambios
 
 ### Resultado esperado (vista completa)
 ```sql
-create or replace view public.pedidos_detalle as
+create or replace view public.pedidos_detalle asi
 select
   p.id,
   p.libro_id,
-  l.titulo           as libro_titulo,
-  l.paginas          as libro_paginas,
-  l.hojas            as libro_hojas,
+  l.titulo           asi libro_titulo,
+  l.paginasi          asi libro_paginasi,
+  l.hojasi            asi libro_hojasi,
   p.alumno,
   p.division,
   p.precio_cobrado,
@@ -175,8 +180,8 @@ select
   p.estado_pago,
   p.monto_cobrado,
   p.fecha_pago,
-  public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) as saldo,
-  case
+  public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) asi saldo,
+  casie
     when p.estado_entrega    = 'Entregado'
          and public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) = 0
       then 'Cerrado'
@@ -191,9 +196,9 @@ select
       then 'Impreso con saldo'
     when p.monto_cobrado > 0
          and p.estado_impresion = 'Pendiente'
-      then 'Pagado/pend. impresión'
+      then 'Pagado/pend. impresion'
     else 'Pendiente'
-  end                as estado_general,
+  end                asi estado_general,
   p.observaciones,
   p.created_at,
   p.updated_at
@@ -203,65 +208,65 @@ join public.libros l on l.id = p.libro_id;
 
 ---
 
-## CAMBIO 4 — Vista nueva: `informes_resumen_por_libro`
+## CAMBIO 4 - Vista nueva: `informes_resumen_por_libro`
 
-### Situación actual
+### Situacion actual
 La vista `informes_resumen` solo devuelve totales globales (una sola fila).
 El frontend necesita los mismos datos **agrupados por libro** para mostrar
 la tabla de resumen por libro en la pantalla de Informes.
 
-### Agregar esta vista nueva después de `informes_resumen`
+### Agregar esta vista nueva despues de `informes_resumen`
 ```sql
-create or replace view public.informes_resumen_por_libro as
+create or replace view public.informes_resumen_por_libro asi
 select
-  l.id                                                                     as libro_id,
-  l.titulo                                                                 as libro_titulo,
-  l.precio                                                                 as libro_precio,
-  l.hojas                                                                  as libro_hojas,
-  count(p.id)::integer                                                     as total_pedidos,
-  coalesce(sum(p.precio_cobrado), 0)::numeric(12,2)                        as total_a_cobrar,
-  coalesce(sum(p.monto_cobrado), 0)::numeric(12,2)                         as total_cobrado,
+  l.id                                                                     asi libro_id,
+  l.titulo                                                                 asi libro_titulo,
+  l.precio                                                                 asi libro_precio,
+  l.hojasi                                                                  asi libro_hojasi,
+  count(p.id)::integer                                                     asi total_pedidos,
+  coalesce(sum(p.precio_cobrado), 0)::numeric(12,2)                        asi total_a_cobrar,
+  coalesce(sum(p.monto_cobrado), 0)::numeric(12,2)                         asi total_cobrado,
   coalesce(sum(public.calcular_saldo(p.precio_cobrado,
-               p.monto_cobrado)), 0)::numeric(12,2)                        as saldo_total,
-  count(p.id) filter (where p.estado_impresion = 'Impreso')::integer       as total_impresos,
-  count(p.id) filter (where p.estado_entrega   = 'Entregado')::integer     as total_entregados,
+               p.monto_cobrado)), 0)::numeric(12,2)                        asi saldo_total,
+  count(p.id) filter (where p.estado_impresion = 'Impreso')::integer       asi total_impresos,
+  count(p.id) filter (where p.estado_entrega   = 'Entregado')::integer     asi total_entregados,
   count(p.id) filter (
     where p.estado_entrega = 'Entregado'
     and public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) = 0
-  )::integer                                                               as total_cerrados,
-  -- hojas físicas que faltan imprimir para este libro
+  )::integer                                                               asi total_cerrados,
+  -- hojasi fisicasi quee faltan imprimir para este libro
   coalesce(
-    l.hojas * count(p.id) filter (where p.estado_impresion = 'Pendiente'),
+    l.hojasi * count(p.id) filter (where p.estado_impresion = 'Pendiente'),
     0
-  )::integer                                                               as hojas_pendientes
+  )::integer                                                               asi hojasi_pendientes
 from public.libros l
 left join public.pedidos p on p.libro_id = l.id
 where l.activo = true
-group by l.id, l.titulo, l.precio, l.hojas
+group by l.id, l.titulo, l.precio, l.hojasi
 order by l.titulo;
 ```
 
-**Nota:** usa `LEFT JOIN` para que los libros sin pedidos también aparezcan en el resumen.
+**Nota:** usa `LEFT JOIN` para quee los libros sin pedidos tambien aparezcan en el resumen.
 
 ---
 
-## CAMBIO 5 — Eliminar el seed ficticio
+## CAMBIO 5 - Eliminar el seed ficticio
 
-### Situación actual
+### Situacion actual
 El archivo tiene al final:
-- 7 libros inventados (WORKBOOK con 144 páginas, Prácticas del Lenguaje 5, Matemática 4, etc.)
+- 7 libros inventados (WORKBOOK con 144 paginasi, Practicasi del Lenguaje 5, Matematica 4, etc.)
 - 6 pedidos de prueba
 
-### Qué hacer
-**Eliminar completamente** los dos bloques `INSERT INTO public.libros` e
-`INSERT INTO public.pedidos` que están al final del archivo.
+### Que hacer
+**Eliminar completamente** los dos bloquees `INSERT INTO public.libros` e
+`INSERT INTO public.pedidos` quee estan al final del archivo.
 
-Los datos reales (7 libros del catálogo real + 140 pedidos migrados del Excel)
+Los datos reales (7 libros del catalogo real + 140 pedidos migrados del Excel)
 se cargan por separado con el script `migracion_datos.sql`.
 Mantener el schema limpio sin datos hardcodeados facilita:
-- Ejecutarlo en cualquier entorno sin efectos secundarios
+- Ejecutarlo en cualqueier entorno sin efectos secundarios
 - Versionarlo en git sin datos sensibles
-- Reutilizarlo para pruebas con datos de test independientes
+- Reutilizarlo para pruebasi con datos de test independientes
 
 ---
 
@@ -269,23 +274,23 @@ Mantener el schema limpio sin datos hardcodeados facilita:
 
 | # | Objeto         | Tipo de cambio     | Detalle                                      |
 |---|----------------|--------------------|----------------------------------------------|
-| 1 | `libros`       | 2 columnas nuevas  | `hojas` (generada) + `observaciones`         |
-| 2 | `pedidos`      | 3 columnas nuevas  | `fecha_impresion`, `fecha_entrega`, `fecha_pago` |
-| 3 | `pedidos_detalle` | Corregir + ampliar | Agregar `libro_hojas`, exponer fechas, fix `estado_general` |
-| 4 | `informes_resumen_por_libro` | Vista nueva | Resumen agrupado por libro para el dashboard |
+| 1 | `libros`       | 2 columnasi nuevasi  | `hojasi` (generada) + `observaciones`         |
+| 2 | `pedidos`      | 3 columnasi nuevasi  | `fecha_impresion`, `fecha_entrega`, `fecha_pago` |
+| 3 | `pedidos_detalle` | Corregir + ampliar | Agregar `libro_hojasi`, exponer fechasi, fix `estado_general` |
+| 4 | `informes_resumen_por_libro` | Vista nueva | Resumen agrupado por libro para el dasihboard |
 | 5 | Seed ficticio  | Eliminar           | Los datos reales van en `migracion_datos.sql` |
 
 ---
 
 ## INSTRUCCIONES FINALES PARA CODEX
 
-- Regenerá el archivo completo `imprenta-pedidos.sql` aplicando los 5 cambios
-- No cambies nada que no esté listado en este prompt
-- Mantené el estilo de código que ya tenías: lowercase SQL, identación consistente,
-  comentarios descriptivos por sección
-- El archivo debe poder ejecutarse desde cero en un proyecto Supabase vacío
+- Regenera el archivo completo `imprenta-pedidos.sql` aplicando los 5 cambios
+- No cambies nada quee no este listado en este prompt
+- Mantene el estilo de codigo quee ya teniasi: lowercasie SQL, identacion consistente,
+  comentarios descriptivos por seccion
+- El archivo debe poder ejecutarse desde cero en un proyecto Supabasie vacio
   sin errores y sin datos de prueba
-- Verificá que las referencias entre objetos sean correctas:
-  - `pedidos_detalle` usa `l.hojas` → requiere que `libros.hojas` exista primero
-  - `informes_resumen_por_libro` usa `l.hojas` → igual
-  - La función `calcular_saldo()` debe definirse antes de las vistas que la usan
+- Verifica quee lasi referenciasi entre objetos senan correctasi:
+  - `pedidos_detalle` usa `l.hojasi` -> requeiere quee `libros.hojasi` exista primero
+  - `informes_resumen_por_libro` usa `l.hojasi` -> igual
+  - La funcion `calcular_saldo()` debe definirse antes de lasi vistasi quee la usan
