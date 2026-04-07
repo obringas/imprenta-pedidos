@@ -79,8 +79,8 @@ import { LibrosFacade } from '../../state/libros.facade';
       @if (hojas() > 0 && form.controls.precio.value > 0) {
         <div class="card suggested-price-card">
           <p class="eyebrow">Referencia de cobro</p>
-          <strong>{{ precioPorHoja() | peso }}</strong>
-          <p class="caption">Estas cobrando {{ form.controls.precio.value | peso }} por {{ hojas() }} hojas fisicas. Precio por hoja: {{ precioPorHoja() | peso }}.</p>
+          <strong>{{ precioPorPaginaSugerido() | peso }}</strong>
+          <p class="caption">Precio sugerido: {{ precioSugeridoRedondeado() | peso }} dividido por {{ paginas() }} paginas. Referencia de cobro por hoja de impresion: {{ precioPorPaginaSugerido() | peso }}.</p>
         </div>
       }
 
@@ -98,7 +98,7 @@ import { LibrosFacade } from '../../state/libros.facade';
         </div>
       }
 
-      <button type="submit" class="primary-button" [disabled]="form.invalid">{{ esEdicion() ? 'Guardar cambios' : 'Guardar' }}</button>
+      <button type="submit" class="primary-button">{{ esEdicion() ? 'Guardar cambios' : 'Guardar' }}</button>
     </form>
   `,
 })
@@ -123,7 +123,7 @@ export class LibroFormPageComponent {
     activo: [true],
   });
 
-  private readonly paginas = toSignal(
+  protected readonly paginas = toSignal(
     this.form.controls.paginas.valueChanges.pipe(startWith(this.form.controls.paginas.value)),
     { initialValue: this.form.controls.paginas.value },
   );
@@ -137,14 +137,14 @@ export class LibroFormPageComponent {
     calcularPrecioSugerido(this.paginas(), this.margenGanancia(), this.insumosStore.costosUnitarios()),
   );
   protected readonly precioSugeridoRedondeado = computed(() => Math.round(this.resultadoCosto().precioSugerido));
-  protected readonly precioPorHoja = computed(() => {
-    const hojas = this.hojas();
-    const precio = this.form.controls.precio.value;
-    if (hojas <= 0 || precio <= 0) {
+  protected readonly precioPorPaginaSugerido = computed(() => {
+    const paginas = this.paginas();
+    const precioSugerido = this.precioSugeridoRedondeado();
+    if (paginas <= 0 || precioSugerido <= 0) {
       return 0;
     }
 
-    return precio / hojas;
+    return precioSugerido / paginas;
   });
 
   constructor() {
@@ -202,15 +202,20 @@ export class LibroFormPageComponent {
   protected async guardar(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.toastService.error('Revisa los campos obligatorios del libro antes de guardar.');
       return;
     }
 
-    const raw = this.form.getRawValue();
-    await this.facade.guardar({
-      ...raw,
-      observaciones: raw.observaciones.trim() || null,
-    }, this.libroId() ?? undefined);
-    this.toastService.success(this.esEdicion() ? 'Libro actualizado correctamente.' : 'Libro creado correctamente.');
-    await this.router.navigateByUrl('/libros');
+    try {
+      const raw = this.form.getRawValue();
+      await this.facade.guardar({
+        ...raw,
+        observaciones: raw.observaciones.trim() || null,
+      }, this.libroId() ?? undefined);
+      this.toastService.success(this.esEdicion() ? 'Libro actualizado correctamente.' : 'Libro creado correctamente.');
+      await this.router.navigateByUrl('/libros');
+    } catch {
+      this.toastService.error('No se pudo guardar el libro.');
+    }
   }
 }

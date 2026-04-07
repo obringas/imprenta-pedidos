@@ -43,6 +43,19 @@ Reglas:
 - `hojas` se calcula en DB como `ceil(paginas / 2)`.
 - `margen_ganancia` se persiste por libro.
 - El default actual es `156`.
+- Si un proyecto existente todavia no tiene `margen_ganancia`, hay que ejecutar un `alter table` antes de usar el alta de libros con el schema nuevo.
+
+Script de actualizacion minima para proyectos viejos:
+
+```sql
+alter table public.libros
+  add column if not exists observaciones text null,
+  add column if not exists margen_ganancia numeric(5, 2) not null default 156
+    check (margen_ganancia >= 0 and margen_ganancia <= 500);
+
+alter table public.libros
+  add column if not exists hojas integer generated always as (ceil(paginas::numeric / 2)) stored;
+```
 
 ---
 
@@ -185,3 +198,6 @@ Los cambios de DB que hoy hay que considerar son:
 5. `configuracion_insumos`
 6. seed real de insumos con toner individual a `160000`
 
+Nota:
+- La ultima tanda funcional agrego mejoras en `Informes`, `Nuevo libro` y `Configuracion`, pero no introdujo cambios nuevos de esquema en Supabase.
+- El semaforo de `Hojas impresas`, la referencia de precio por hoja y el formateo visual de inputs son cambios de frontend.

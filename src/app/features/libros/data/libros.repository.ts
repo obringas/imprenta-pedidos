@@ -107,7 +107,7 @@ export class SupabaseLibrosRepository implements LibrosRepository {
 
   async create(input: CrearLibroInput): Promise<Libro> {
     const client = this.requireClient();
-    const payload = {
+    const payloadConMargen = {
       titulo: input.titulo.trim(),
       precio: input.precio,
       paginas: input.paginas,
@@ -116,7 +116,24 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       activo: true,
     };
 
-    const { data, error } = await client.from('libros').insert(payload as never).select('*').single();
+    const { data, error } = await client.from('libros').insert(payloadConMargen as never).select('*').single();
+    if (error && this.esColumnaMargenInexistente(error)) {
+      const payloadLegacy = {
+        titulo: input.titulo.trim(),
+        precio: input.precio,
+        paginas: input.paginas,
+        observaciones: input.observaciones,
+        activo: true,
+      };
+
+      const reintento = await client.from('libros').insert(payloadLegacy as never).select('*').single();
+      if (reintento.error) {
+        throw AppError.inesperado(reintento.error);
+      }
+
+      return this.mapLibro(reintento.data);
+    }
+
     if (error) {
       throw AppError.inesperado(error);
     }
@@ -126,7 +143,7 @@ export class SupabaseLibrosRepository implements LibrosRepository {
 
   async update(id: string, input: ActualizarLibroInput): Promise<Libro> {
     const client = this.requireClient();
-    const payload = {
+    const payloadConMargen = {
       titulo: input.titulo.trim(),
       precio: input.precio,
       paginas: input.paginas,
@@ -135,7 +152,24 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       activo: input.activo,
     };
 
-    const { data, error } = await client.from('libros').update(payload as never).eq('id', id).select('*').single();
+    const { data, error } = await client.from('libros').update(payloadConMargen as never).eq('id', id).select('*').single();
+    if (error && this.esColumnaMargenInexistente(error)) {
+      const payloadLegacy = {
+        titulo: input.titulo.trim(),
+        precio: input.precio,
+        paginas: input.paginas,
+        observaciones: input.observaciones,
+        activo: input.activo,
+      };
+
+      const reintento = await client.from('libros').update(payloadLegacy as never).eq('id', id).select('*').single();
+      if (reintento.error) {
+        throw AppError.inesperado(reintento.error);
+      }
+
+      return this.mapLibro(reintento.data);
+    }
+
     if (error) {
       throw AppError.inesperado(error);
     }
@@ -159,8 +193,18 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       paginas: row.paginas,
       hojas: row.hojas,
       observaciones: row.observaciones,
-      margenGanancia: Number(row.margen_ganancia),
+      margenGanancia: Number(row.margen_ganancia ?? 156),
       activo: row.activo,
     };
+  }
+
+  private esColumnaMargenInexistente(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+
+    const code = 'code' in error ? String(error.code) : '';
+    const message = 'message' in error ? String(error.message) : '';
+    return code === 'PGRST204' && message.includes('margen_ganancia');
   }
 }

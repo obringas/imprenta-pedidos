@@ -1259,6 +1259,8 @@ Esta seccion complementa el prompt original con cambios ya implementados en la a
 - El resumen de informes debe mostrar por separado los KPIs `Libros cobrados`, `Monto cobrado`, `Pendientes cobro` y `Saldo total`.
 - El KPI `Monto cobrado` debe calcularse como la suma real de `montoCobrado`.
 - La tabla `Avance por libro` debe incluir ademas las columnas `Impresos`, `Pagados` y `Por cobrar`.
+- El resumen de informes debe incluir el KPI `Hojas impresas`.
+- El KPI `Hojas impresas` debe actuar como semaforo visual del toner con referencia en `22000` caras impresas.
 
 ### Branding y UI
 - El sistema usa branding `BrujitaCandyBar` con titulo corto `Pedidos de Impresion`.
@@ -1266,6 +1268,9 @@ Esta seccion complementa el prompt original con cambios ya implementados en la a
 - La paleta visual base es violeta, dorado y crema.
 - Los KPIs deben adaptarse a montos grandes para no desbordar el recuadro.
 - En el formulario de libros, `margenGanancia` inicia en `156` y puede editarse por libro.
+- En el alta de libros debe mostrarse una referencia visual de precio por hoja de impresion calculada como `precio sugerido / paginas`.
+- En `Configuracion`, los valores numericos deben verse formateados dentro del input con separador de miles.
+- Los insumos monetarios en `Configuracion` deben mostrar prefijo `$` dentro del campo para distinguirlos visualmente.
 
 ### Criterio de implementacion
 - Si una instruccion anterior del documento describe el avance rapido de pago como `Pendiente -> Sena -> Pagado`, reemplazarla por el comportamiento actual `Pendiente <-> Pagado`.
@@ -1285,6 +1290,10 @@ Esta seccion complementa el prompt original con cambios ya implementados en la a
 - [x] `Hecho` Resincronizar `Precio`, `Monto cobrado` y `Saldo` al cambiar de libro en el alta de pedido.
 - [x] `Hecho` Agregar columnas `Impresos`, `Pagados` y `Por cobrar` en `Avance por libro`.
 - [x] `Hecho` Ajustar visualizacion de montos largos en los KPIs.
+- [x] `Hecho` Agregar referencia de cobro por hoja en alta de libro.
+- [x] `Hecho` Agregar KPI `Hojas impresas` con semaforo de toner.
+- [x] `Hecho` Formatear valores de `Configuracion` dentro del input con separador de miles y prefijo `$` en insumos monetarios.
+- [x] `Hecho` Mostrar errores visibles al fallar el guardado de libros.
 
 ## 14. CONFIGURACION DE INSUMOS
 
