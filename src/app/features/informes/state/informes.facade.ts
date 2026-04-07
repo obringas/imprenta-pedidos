@@ -27,15 +27,23 @@ type ResumenLibro = {
 export class InformesFacade {
   private readonly pedidosFacade = inject(PedidosFacade);
   private readonly librosFacade = inject(LibrosFacade);
+  private readonly limiteToner = 22000;
 
   readonly kpis = computed(() => {
     const pedidos = this.pedidosFacade.pedidos();
     const pendientesImprimir = pedidos.filter((pedido) => pedido.estadoImpresion === 'Pendiente');
+    const impresos = pedidos.filter((pedido) => pedido.estadoImpresion === 'Impreso');
     const hojasPendientes = pendientesImprimir.reduce((acumulado, pedido) => acumulado + pedido.libroHojas, 0);
+    const hojasImpresas = impresos.reduce((acumulado, pedido) => acumulado + pedido.libroHojas, 0);
+    const progresoToner = hojasImpresas / this.limiteToner;
+    const estadoToner = progresoToner >= 0.8 ? 'rojo' : progresoToner >= 0.5 ? 'amarillo' : 'verde';
 
     return {
       totalPedidos: pedidos.length,
-      impresos: pedidos.filter((pedido) => pedido.estadoImpresion === 'Impreso').length,
+      impresos: impresos.length,
+      hojasImpresas,
+      limiteToner: this.limiteToner,
+      estadoToner,
       cobrados: pedidos.filter((pedido) => pedido.estadoPago === 'Pagado').length,
       montoCobrado: pedidos.reduce((acumulado, pedido) => acumulado + pedido.montoCobrado, 0),
       pendientesCobro: pedidos.filter((pedido) => pedido.saldo > 0).length,

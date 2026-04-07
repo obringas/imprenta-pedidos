@@ -59,6 +59,16 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
       <section class="stack">
         <section class="kpi-grid">
           <article class="card kpi-card kpi-highlight"><span>Hojas pend. imprimir</span><strong>{{ facade.kpis().hojasPendientes }}</strong></article>
+          <article
+            class="card kpi-card"
+            [class.kpi-toner-verde]="facade.kpis().estadoToner === 'verde'"
+            [class.kpi-toner-amarillo]="facade.kpis().estadoToner === 'amarillo'"
+            [class.kpi-toner-rojo]="facade.kpis().estadoToner === 'rojo'"
+          >
+            <span>Hojas impresas</span>
+            <strong>{{ facade.kpis().hojasImpresas }}</strong>
+            <small class="caption">Referencia toner: {{ facade.kpis().limiteToner }}</small>
+          </article>
           <article class="card kpi-card"><span>Total pedidos</span><strong>{{ facade.kpis().totalPedidos }}</strong></article>
           <article class="card kpi-card"><span>Impresos</span><strong>{{ facade.kpis().impresos }}</strong></article>
           <article class="card kpi-card"><span>Libros cobrados</span><strong>{{ facade.kpis().cobrados }}</strong></article>

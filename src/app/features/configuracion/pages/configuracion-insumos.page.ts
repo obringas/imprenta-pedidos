@@ -49,7 +49,24 @@ type InsumoForm = FormGroup<{
                   <div class="caption">{{ insumo.clave }}</div>
                 </td>
                 <td>
-                  <input type="number" formControlName="valor" />
+                  @if (esMonetario(insumo.unidad)) {
+                    <div class="input-with-prefix">
+                      <span class="input-prefix">$</span>
+                      <input
+                        type="text"
+                        inputmode="numeric"
+                        [value]="valorFormateado(insumo.id)"
+                        (input)="actualizarValor(insumo.id, $any($event.target).value)"
+                      />
+                    </div>
+                  } @else {
+                    <input
+                      type="text"
+                      inputmode="numeric"
+                      [value]="valorFormateado(insumo.id)"
+                      (input)="actualizarValor(insumo.id, $any($event.target).value)"
+                    />
+                  }
                 </td>
                 <td>{{ insumo.unidad }}</td>
                 <td>
@@ -104,6 +121,21 @@ export class ConfiguracionInsumosPageComponent {
     });
     this.formularios.set(id, creado);
     return creado;
+  }
+
+  protected esMonetario(unidad: string): boolean {
+    return unidad.toUpperCase().includes('ARS');
+  }
+
+  protected valorFormateado(id: string): string {
+    const valor = this.obtenerFormulario(id).controls.valor.value;
+    return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(valor);
+  }
+
+  protected actualizarValor(id: string, texto: string): void {
+    const digitos = texto.replace(/\D/g, '');
+    const valor = digitos ? Number(digitos) : 0;
+    this.obtenerFormulario(id).controls.valor.setValue(valor);
   }
 
   protected async guardar(id: string): Promise<void> {

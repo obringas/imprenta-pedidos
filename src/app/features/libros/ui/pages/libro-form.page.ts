@@ -76,6 +76,14 @@ import { LibrosFacade } from '../../state/libros.facade';
         <p class="caption warning-text">Los pedidos existentes mantienen su precio original aunque cambies este valor.</p>
       </div>
 
+      @if (hojas() > 0 && form.controls.precio.value > 0) {
+        <div class="card suggested-price-card">
+          <p class="eyebrow">Referencia de cobro</p>
+          <strong>{{ precioPorHoja() | peso }}</strong>
+          <p class="caption">Estas cobrando {{ form.controls.precio.value | peso }} por {{ hojas() }} hojas fisicas. Precio por hoja: {{ precioPorHoja() | peso }}.</p>
+        </div>
+      }
+
       @if (insumosStore.cargando()) {
         <div class="card suggested-price-card suggested-price-skeleton">
           <div class="skeleton-line skeleton-title"></div>
@@ -129,6 +137,15 @@ export class LibroFormPageComponent {
     calcularPrecioSugerido(this.paginas(), this.margenGanancia(), this.insumosStore.costosUnitarios()),
   );
   protected readonly precioSugeridoRedondeado = computed(() => Math.round(this.resultadoCosto().precioSugerido));
+  protected readonly precioPorHoja = computed(() => {
+    const hojas = this.hojas();
+    const precio = this.form.controls.precio.value;
+    if (hojas <= 0 || precio <= 0) {
+      return 0;
+    }
+
+    return precio / hojas;
+  });
 
   constructor() {
     effect(() => {

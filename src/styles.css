@@ -65,6 +65,9 @@ input, select, textarea { width: 100%; padding: 0.9rem 1rem; border-radius: 0.9r
 .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 1.25rem; }
 .kpi-card { gap: 0.5rem; min-width: 0; overflow: hidden; }
 .kpi-card strong { display: block; max-width: 100%; font-size: clamp(1rem, 1.6vw, 1.55rem); line-height: 1.05; letter-spacing: -0.03em; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.kpi-toner-verde { background: linear-gradient(135deg, rgba(22, 101, 52, 0.14), rgba(220, 252, 231, 0.9)); }
+.kpi-toner-amarillo { background: linear-gradient(135deg, rgba(146, 64, 14, 0.14), rgba(253, 230, 138, 0.92)); }
+.kpi-toner-rojo { background: linear-gradient(135deg, rgba(153, 27, 27, 0.16), rgba(254, 202, 202, 0.94)); }
 .kpi-highlight { background: linear-gradient(135deg, rgba(242, 163, 0, 0.25), rgba(91, 56, 176, 0.14)); }
 .filters-grid, .dashboard-grid, .form-row, .page-header, .card-row, .action-row, .filters-actions, .dialog-actions { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .note-card { background: rgba(255, 247, 237, 0.95); }
@@ -108,6 +111,16 @@ input, select, textarea { width: 100%; padding: 0.9rem 1rem; border-radius: 0.9r
 .checkbox-field { grid-template-columns: auto 1fr; align-items: center; }
 .input-with-suffix { position: relative; }
 .input-with-suffix input { padding-right: 2.75rem; }
+.input-with-prefix { position: relative; }
+.input-with-prefix input { padding-left: 2.2rem; }
+.input-prefix {
+  position: absolute;
+  top: 50%;
+  left: 0.9rem;
+  transform: translateY(-50%);
+  color: #6b7280;
+  font-weight: 700;
+}
 .input-suffix {
   position: absolute;
   top: 50%;
