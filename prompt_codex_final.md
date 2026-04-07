@@ -826,90 +826,103 @@ VALUES
 
 ```
 src/
- app/
+  index.html
+  main.ts
+  manifest.webmanifest
+  styles.css
+  app/
+    app.component.ts
+    app.config.ts
+    app.routes.ts
     core/
-       auth/
-          auth.service.ts            <- sesion como signal, login/logout
-          auth.guard.ts              <- redirige a /login si no autenticado
-       supabase/
-          supabase.client.ts         <- InjectionToken con createClient()
-          database.types.ts          <- generado por "supabase gen types"
-       layout/
-           app-shell.component.ts     <- router-outlet + nav condicional
-           nav-bottom.component.ts    <- nav fijo inferior mobile
-           nav-sidebar.component.ts   <- sidebar desktop (lg+)
-   
+      auth/
+        auth.guard.ts
+        auth.service.ts
+      layout/
+        app-shell.component.ts
+      supabase/
+        database.types.ts
+        supabase.client.ts
     features/
-       pedidos/
-          pedidos.routes.ts
-          data/
-             pedidos.repository.ts    <- interface + implementacion Supabase
-             pedidos.repository.token.ts
-          domain/
-             pedido.model.ts          <- tipos e interfaces del dominio
-             estado.utils.ts          <- determinarEstadoGeneral(), pura
-             pedido.validator.ts      <- Zod schemas
-          state/
-             pedidos.store.ts         <- signals: pedidos, loading, filtros
-             pedidos.facade.ts        <- API publica para componentes
-          ui/
-              pages/
-                 pedidos-lista.page.ts
-                 pedido-nuevo.page.ts
-                 pedido-detalle.page.ts
-              components/
-                  pedido-card.component.ts
-                  pedido-row.component.ts
-                  pedido-form.component.ts
-                  quick-status.component.ts
-                  filtros-panel.component.ts
-      
-       libros/
-          libros.routes.ts
-          data/libros.repository.ts
-          domain/libro.model.ts
-          state/libros.facade.ts
-          ui/
-              pages/
-                 libros-lista.page.ts
-                 libro-form.page.ts
-              components/
-                  libro-card.component.ts
-                  libro-selector.component.ts
-      
-       informes/
-           informes.routes.ts
-           data/informes.repository.ts
-           state/informes.facade.ts
-           ui/
-               pages/informes.page.ts
-               components/
-                   kpi-card.component.ts
-                   resumen-tabla.component.ts
-                   sin-pagar-lista.component.ts
-                   faltan-imprimir-lista.component.ts
-   
+      auth/
+        ui/
+          login.page.ts
+      data/
+        mock-data.ts
+      configuracion/
+        configuracion.routes.ts
+        pages/
+          configuracion-insumos.page.ts
+        repositories/
+          insumos.repository.interface.ts
+          insumos.repository.token.ts
+          insumos.repository.ts
+        stores/
+          insumos.store.ts
+      pedidos/
+        pedidos.routes.ts
+        data/
+          pedidos.repository.ts
+          pedidos.repository.token.ts
+        domain/
+          estado.utils.spec.ts
+          estado.utils.ts
+          pedido.model.ts
+          pedido.validator.ts
+        state/
+          pedidos.facade.ts
+          pedidos.store.ts
+        ui/
+          components/
+            pedido-form.component.ts
+          pages/
+            pedido-detalle.page.ts
+            pedido-nuevo.page.ts
+            pedidos-lista.page.ts
+      libros/
+        libros.routes.ts
+        data/
+          libros.repository.ts
+          libros.repository.token.ts
+        domain/
+          libro.model.ts
+        state/
+          libros.facade.ts
+        ui/
+          pages/
+            libro-form.page.ts
+            libros-lista.page.ts
+      informes/
+        informes.routes.ts
+        state/
+          informes.facade.ts
+        ui/
+          pages/
+            informes.page.ts
     shared/
-        components/
-           estado-badge.component.ts
-           confirm-dialog.component.ts
-           skeleton-card.component.ts
-           empty-state.component.ts
-        pipes/
-           peso.pipe.ts
-           fecha-corta.pipe.ts
-        errors/
-           app-error.ts              <- AppError + Result<T>
-        constants/
-           negocio.constants.ts      <- ESTADO_PAGO, ESTADO_GENERAL, etc.
-        utils/
-            result.ts                 <- Result<T, E> pattern
-
- environments/
+      components/
+        confirm-dialog.component.ts
+        empty-state.component.ts
+        estado-badge.component.ts
+        toast-outlet.component.ts
+      constants/
+        negocio.constants.ts
+      errors/
+        app-error.ts
+      models/
+        configuracion-insumos.model.ts
+      pipes/
+        peso.pipe.ts
+      services/
+        toast.service.ts
+      utils/
+        calcular-precio-sugerido.util.spec.ts
+        calcular-precio-sugerido.util.ts
+        result.ts
+        text-normalizer.ts
+  environments/
     environment.ts
     environment.prod.ts
- manifest.webmanifest
- ngsw-config.json
 ```
 
 ---
@@ -1168,6 +1181,9 @@ export const environment = {
 - [x] `Hecho` Implementar toggle activo/inactivo
 - [x] `Hecho` Implementar FAB flotante para libros
 - [x] `Hecho` Mostrar warning ms visible al cambiar precios
+- [x] `Hecho` Implementar calculo de precio sugerido reactivo en formulario de libro
+- [x] `Hecho` Agregar margen de ganancia configurable por libro (persistido en DB)
+- [x] `Hecho` Exponer costo base, hojas y precio sugerido con senales derivadas
 
 ### Fase 6  Informes y priorizacin operativa
 - [x] `Hecho` Implementar dashboard base con KPIs
@@ -1203,6 +1219,13 @@ export const environment = {
 - [ ] `Pendiente` Cubrir flujos crticos de pedidos
 - [x] `Hecho` Revisar errores de validacin y mensajes para usuaria no tcnica
 - [ ] `Pendiente` Auditar performance de carga y acciones rpidas
+
+### Fase 10  Configuracion de insumos
+- [x] `Hecho` Crear tabla `configuracion_insumos` en Supabase con seed de valores reales
+- [x] `Hecho` Crear repositorio y store de insumos con Angular Signals
+- [x] `Hecho` Implementar pantalla de edicion de costos en `configuracion/insumos`
+- [x] `Hecho` Redirigir `configuracion` a `configuracion/insumos` desde la navegacion principal
+- [ ] `Pendiente` Agregar historial de cambios de precios de insumos
 
 ### Bloqueadores actuales
 - [ ] `Bloqueado` Faltan credenciales reales de Supabase
@@ -1242,6 +1265,7 @@ Esta seccion complementa el prompt original con cambios ya implementados en la a
 - El favicon vigente es `BrujitaGemini.ico`.
 - La paleta visual base es violeta, dorado y crema.
 - Los KPIs deben adaptarse a montos grandes para no desbordar el recuadro.
+- En el formulario de libros, `margenGanancia` inicia en `156` y puede editarse por libro.
 
 ### Criterio de implementacion
 - Si una instruccion anterior del documento describe el avance rapido de pago como `Pendiente -> Sena -> Pagado`, reemplazarla por el comportamiento actual `Pendiente <-> Pagado`.
@@ -1261,3 +1285,59 @@ Esta seccion complementa el prompt original con cambios ya implementados en la a
 - [x] `Hecho` Resincronizar `Precio`, `Monto cobrado` y `Saldo` al cambiar de libro en el alta de pedido.
 - [x] `Hecho` Agregar columnas `Impresos`, `Pagados` y `Por cobrar` en `Avance por libro`.
 - [x] `Hecho` Ajustar visualizacion de montos largos en los KPIs.
+
+## 14. CONFIGURACION DE INSUMOS
+
+Los costos de insumos se persisten en la tabla `configuracion_insumos` de Supabase
+y son editables por la usuaria desde la ruta `configuracion/insumos`.
+La navegacion principal apunta a `/configuracion` y esa ruta redirige a `configuracion/insumos`.
+
+### Claves registradas
+
+| Clave                | Descripcion                      | Unidad            |
+|----------------------|----------------------------------|-------------------|
+| `tapa_paquete`       | Precio del paquete de tapas A4   | ARS x 50 unidades |
+| `tapa_cantidad`      | Tapas por paquete                | unidades          |
+| `espiral_paquete`    | Precio del paquete de espirales  | ARS x 50 unidades |
+| `espiral_cantidad`   | Espirales por paquete            | unidades          |
+| `hojas_resma`        | Precio de 10 resmas de hojas A4  | ARS x 10 resmas   |
+| `hojas_cantidad`     | Hojas por resma                  | hojas por resma   |
+| `toner_costo`        | Precio de 1 toner individual     | ARS x cartucho    |
+| `toner_impresiones`  | Impresiones por juego de toner   | caras impresas    |
+
+### Formula de precio sugerido
+
+```
+hojas          = ceil(paginas / 2)
+costoBase      = tapaPorLibro + espiralPorLibro
+               + (hojas x hojaUnitaria)
+               + (paginas x tonerPorCara)
+precioSugerido = costoBase x (1 + margenGanancia / 100)
+```
+
+Donde:
+
+```
+tonerPorCara = (toner_costo x 4) / toner_impresiones
+```
+
+En el estado actual, `toner_costo` representa el valor de 1 toner individual.
+El juego completo se obtiene multiplicando ese valor por `4`.
+
+### Archivos clave
+
+- `supabase/configuracion-insumos.sql` - DDL y seed inicial
+- `shared/models/configuracion-insumos.model.ts` - tipos e interfaces
+- `shared/utils/calcular-precio-sugerido.util.ts` - funcion pura + derivacion de costos
+- `features/configuracion/stores/insumos.store.ts` - estado global reactivo
+- `features/configuracion/pages/configuracion-insumos.page.ts` - UI de edicion
+
+### Nota de diseno
+
+Los valores bulk (precio del paquete + cantidad) se persisten por separado en Supabase.
+El costo unitario se deriva en `derivarCostosUnitarios()`, que es el unico lugar
+del sistema donde ocurre esa conversion.
+La usuaria edita exactamente lo que compra, sin calculos manuales.
+El `precio_sugerido` no se persiste en base de datos - se calcula en tiempo real
+en el frontend con Angular Signals.
+El `margen_ganancia` si se persiste por libro y hoy arranca en `156` por defecto.

@@ -24,6 +24,8 @@ create table if not exists public.libros (
   paginas       integer not null check (paginas > 0),
   hojas         integer generated always as (ceil(paginas::numeric / 2)) stored,
   observaciones text null,
+  margen_ganancia numeric(5, 2) not null default 156
+    check (margen_ganancia >= 0 and margen_ganancia <= 500),
   activo        boolean not null default true,
   created_at    timestamptz not null default timezone('utc', now()),
   updated_at    timestamptz not null default timezone('utc', now())

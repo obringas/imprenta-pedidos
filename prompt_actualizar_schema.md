@@ -1,296 +1,187 @@
 # Actualizacion del schema - imprenta-pedidos.sql
 
-Este prompt describe exactamente quee cambiar en el archivo `imprenta-pedidos.sql`
-quee generasite anteriormente. El objetivo es quee el schema queede completo y alineado
-con todos los requeerimientos del sistema antes de quee arranquee el desarrollo Angular.
-
-Lee cada seccion, aplica el cambio, y regenera el archivo completo y funcional.
+Este archivo documenta los cambios de base de datos que hoy forman parte del proyecto.
+Sirve como referencia para mantener `supabase/imprenta-pedidos.sql` y los artefactos
+relacionados alineados con la aplicacion Angular.
 
 ---
 
-## CONTEXTO
+## Contexto
 
-Nota de integracion actual:
-- En basie de datos lasi columnasi siguen en `snake_casie` como `precio_cobrado` y `monto_cobrado`.
-- En el frontend Angular y en los modelos TypeScript esasi columnasi se consumen mapeadasi a `camelCasie` como `precioCobrado` y `montoCobrado`.
-- Esa conversion debe seguir resolviendose en el repositorio y no en los facades o componentes.
-
-El schema actual tiene una basie solida (ENUMs, triggers, RLS, funcion `calcular_saldo`,
-vistasi `pedidos_detalle` e `informes_resumen`). Hay 5 cambios a aplicar:
-
-- 2 columnasi faltantes en `libros`
-- 3 columnasi faltantes en `pedidos`
-- 1 correccion en la vista `pedidos_detalle`
-- 1 columna faltante en `pedidos_detalle`
-- 1 vista nueva: `informes_resumen_por_libro`
-- Eliminar el seed ficticio (los datos reales se cargan por separado)
+- En base de datos se mantiene `snake_case`.
+- En frontend Angular y TypeScript se usa `camelCase`.
+- La conversion entre ambos formatos ocurre solo en los repositorios.
+- El precio sugerido no se persiste en DB: se calcula en frontend.
+- Lo que si se persiste es:
+  - `precio`
+  - `margen_ganancia`
+  - configuracion editable de insumos
 
 ---
 
-## CAMBIO 1 - Tabla `libros`: agregar `hojasi` y `observaciones`
+## Cambios vigentes en `libros`
 
-### Situacion actual
+La tabla `public.libros` debe incluir:
+
 ```sql
 create table if not exists public.libros (
-  id         uuid primary key default gen_random_uuid(),
-  titulo     text not null,
-  precio     numeric(12, 2) not null check (precio >= 0),
-  paginasi    integer not null check (paginasi > 0),
-  activo     boolean not null default true,
-  created_at timestamptz not null default timezone('utc', now()),
-  updated_at timestamptz not null default timezone('utc', now())
+  id              uuid primary key default gen_random_uuid(),
+  titulo          text not null,
+  precio          numeric(12, 2) not null check (precio >= 0),
+  paginas         integer not null check (paginas > 0),
+  hojas           integer generated always as (ceil(paginas::numeric / 2)) stored,
+  observaciones   text null,
+  margen_ganancia numeric(5, 2) not null default 156
+    check (margen_ganancia >= 0 and margen_ganancia <= 500),
+  activo          boolean not null default true,
+  created_at      timestamptz not null default timezone('utc', now()),
+  updated_at      timestamptz not null default timezone('utc', now())
 );
 ```
 
-### Que agregar
-Dos columnasi nuevasi despues de `paginasi`:
-
-```sql
-hojasi integer generated always asi (ceil(paginasi::numeric / 2)) stored,
-observaciones text null,
-```
-
-**Por quee `hojasi`:**
-La imprenta trabaja en doble faz. El calculo `ceil(paginasi / 2)` se usa en multiples
-lugares: la vista de informes, el informe de "faltan imprimir", el resumen por libro.
-Al guardarlo como columna generada, el dato es consistente y no se recalcula en cada
-queery. Un libro de 79 paginasi -> 40 hojasi (la uultima tiene una cara en blanco).
-
-**Por quee `observaciones`:**
-La usuaria necesita poder anotar datos por libro (ej: "pendiente conseguir el PDF",
-"precio acordado con el colegio", etc.).
-
-### Resultado esperado
-```sql
-create table if not exists public.libros (
-  id            uuid primary key default gen_random_uuid(),
-  titulo        text not null,
-  precio        numeric(12, 2) not null check (precio >= 0),
-  paginasi       integer not null check (paginasi > 0),
-  hojasi         integer generated always asi (ceil(paginasi::numeric / 2)) stored,
-  observaciones text null,
-  activo        boolean not null default true,
-  created_at    timestamptz not null default timezone('utc', now()),
-  updated_at    timestamptz not null default timezone('utc', now())
-);
-```
+Reglas:
+- `hojas` se calcula en DB como `ceil(paginas / 2)`.
+- `margen_ganancia` se persiste por libro.
+- El default actual es `156`.
 
 ---
 
-## CAMBIO 2 - Tabla `pedidos`: agregar lasi 3 columnasi de fecha
+## Cambios vigentes en `pedidos`
 
-### Situacion actual
-La tabla `pedidos` registra los *estados* pero no *cuando* ocurrio cada evento.
-Lasi fechasi son necesariasi para el historial y para quee la usuaria recuerde
-cuando imprimio, cuando cobro, cuando entrego.
-
-### Que agregar
-Tres columnasi, una por cada flujo de estado, despues de su estado correspondiente:
+La tabla `public.pedidos` debe incluir estas fechas:
 
 ```sql
--- despues de estado_impresion:
 fecha_impresion date null,
-
--- despues de estado_entrega:
-fecha_entrega date null,
-
--- despues de monto_cobrado:
-fecha_pago date null,
+fecha_entrega   date null,
+fecha_pago      date null,
 ```
 
-### Resultado esperado (fragmento)
+Se mantiene la restriccion:
+
 ```sql
-create table if not exists public.pedidos (
-  id               uuid primary key default gen_random_uuid(),
-  libro_id         uuid not null references public.libros(id) on update casicade on delete restrict,
-  alumno           text not null,
-  division         text null,
-  precio_cobrado   numeric(12, 2) not null check (precio_cobrado >= 0),
-  estado_impresion public.estado_impresion not null default 'Pendiente',
-  fecha_impresion  date null,
-  estado_entrega   public.estado_entrega not null default 'Pendiente',
-  fecha_entrega    date null,
-  estado_pago      public.estado_pago not null default 'Pendiente',
-  monto_cobrado    numeric(12, 2) not null default 0 check (monto_cobrado >= 0),
-  fecha_pago       date null,
-  observaciones    text null,
-  created_at       timestamptz not null default timezone('utc', now()),
-  updated_at       timestamptz not null default timezone('utc', now()),
-  constraint pedidos_monto_no_supera_precio check (monto_cobrado <= precio_cobrado)
+constraint pedidos_monto_no_supera_precio
+  check (monto_cobrado <= precio_cobrado)
+```
+
+---
+
+## Vista `pedidos_detalle`
+
+La vista debe exponer:
+- `libro_hojas`
+- `fecha_impresion`
+- `fecha_entrega`
+- `fecha_pago`
+
+Y el `estado_general` debe usar esta logica para el caso de cobro previo a impresion:
+
+```sql
+when p.monto_cobrado > 0
+     and p.estado_impresion = 'Pendiente'
+  then 'Pagado/pend. impresion'
+```
+
+---
+
+## Vista `informes_resumen_por_libro`
+
+Debe existir una vista agrupada por libro con:
+- `libro_id`
+- `libro_titulo`
+- `libro_precio`
+- `libro_hojas`
+- `total_pedidos`
+- `total_a_cobrar`
+- `total_cobrado`
+- `saldo_total`
+- `total_impresos`
+- `total_entregados`
+- `total_cerrados`
+- `hojas_pendientes`
+
+---
+
+## Nueva tabla `configuracion_insumos`
+
+Debe existir el archivo:
+
+`supabase/configuracion-insumos.sql`
+
+Con la tabla:
+
+```sql
+create table if not exists public.configuracion_insumos (
+  id          uuid primary key default gen_random_uuid(),
+  clave       text not null unique,
+  descripcion text not null,
+  valor       numeric(12, 2) not null check (valor >= 0),
+  unidad      text not null,
+  updated_at  timestamptz not null default timezone('utc', now())
 );
 ```
 
+Y con:
+- trigger `trg_configuracion_insumos_updated_at`
+- RLS habilitado
+- politica de lectura para autenticados
+- politica de edicion para autenticados
+
 ---
 
-## CAMBIO 3 - Vista `pedidos_detalle`: agregar `libro_hojasi` y corregir `estado_general`
+## Seed actual de insumos
 
-### Problema 1: falta `libro_hojasi`
-La vista actual no expone lasi hojasi del libro. El frontend Angular la necesita
-para mostrar cuantasi hojasi requeiere cada pedido pendiente en el informe
-"Faltan imprimir".
+El seed vigente es:
 
-Agregar en el SELECT, despues de `l.paginasi asi libro_paginasi`:
 ```sql
-l.hojasi asi libro_hojasi,
+insert into public.configuracion_insumos (clave, descripcion, valor, unidad) values
+  ('tapa_paquete', 'Tapas A4 (paquete)', 6500, 'ARS x 50 unidades'),
+  ('tapa_cantidad', 'Tapas por paquete', 50, 'unidades'),
+  ('espiral_paquete', 'Espirales (paquete)', 4895, 'ARS x 50 unidades'),
+  ('espiral_cantidad', 'Espirales por paquete', 50, 'unidades'),
+  ('hojas_resma', 'Hojas A4 (10 resmas)', 49720, 'ARS x 10 resmas'),
+  ('hojas_cantidad', 'Hojas por resma', 500, 'hojas por resma'),
+  ('toner_costo', 'Toner individual', 160000, 'ARS x cartucho'),
+  ('toner_impresiones', 'Impresiones por juego de toner', 22000, 'caras impresas');
 ```
 
-### Problema 2: `estado_general` - logica incorrecta en el uultimo WHEN
+Importante:
+- `toner_costo` representa un toner individual.
+- El juego completo se calcula en frontend como `toner_costo * 4`.
+- No guardar en DB el costo ya multiplicado por cuatro.
 
-#### Codigo actual (incorrecto)
-```sql
-when p.estado_pago = 'Pagado' or p.monto_cobrado > 0 then 'Pagado/pend. impresion'
+---
+
+## Formula funcional asociada
+
+La formula vigente en frontend para derivar costos unitarios es:
+
+```ts
+tonerPorCara = (toner_costo * 4) / toner_impresiones
 ```
 
-#### Por quee es incorrecto
-Esta condicion mezcla dos casios distintos con `OR`:
-- `estado_pago = 'Pagado'`: puede ocurrir aunquee `monto_cobrado = 0`
-  (edge casie: si alguien pone Pagado pero no cargo el monto)
-- `monto_cobrado > 0`: incluye correctamente el casio Sena con monto parcial
+Y el precio sugerido se calcula como:
 
-El estado `Pagado/pend. impresion` debe activarse cuando hay dinero recibido
-(ya sena Pagado completo o Sena parcial) PERO el libro todavia no se imprimio.
-La condicion correcta es explicita en ambasi partes:
+```ts
+hojas = ceil(paginas / 2)
+costoBase =
+  tapaPorLibro +
+  espiralPorLibro +
+  hojas * hojaUnitaria +
+  paginas * tonerPorCara
 
-#### Codigo correcto
-```sql
-when p.monto_cobrado > 0 and p.estado_impresion = 'Pendiente' then 'Pagado/pend. impresion'
-```
-
-Esto es correcto porquee:
-- Los casios con `estado_impresion = 'Impreso'` ya fueron capturados por los WHEN anteriores
-- Al llegar a este WHEN, `estado_impresion` es siempre 'Pendiente' implicitamente
-- Aun asii, hacerlo explicito es masi legible y robusto ante futuros cambios
-
-### Resultado esperado (vista completa)
-```sql
-create or replace view public.pedidos_detalle asi
-select
-  p.id,
-  p.libro_id,
-  l.titulo           asi libro_titulo,
-  l.paginasi          asi libro_paginasi,
-  l.hojasi            asi libro_hojasi,
-  p.alumno,
-  p.division,
-  p.precio_cobrado,
-  p.estado_impresion,
-  p.fecha_impresion,
-  p.estado_entrega,
-  p.fecha_entrega,
-  p.estado_pago,
-  p.monto_cobrado,
-  p.fecha_pago,
-  public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) asi saldo,
-  casie
-    when p.estado_entrega    = 'Entregado'
-         and public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) = 0
-      then 'Cerrado'
-    when p.estado_entrega    = 'Entregado'
-         and public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) > 0
-      then 'Entregado con saldo'
-    when p.estado_impresion  = 'Impreso'
-         and public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) = 0
-      then 'Listo p/entregar'
-    when p.estado_impresion  = 'Impreso'
-         and public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) > 0
-      then 'Impreso con saldo'
-    when p.monto_cobrado > 0
-         and p.estado_impresion = 'Pendiente'
-      then 'Pagado/pend. impresion'
-    else 'Pendiente'
-  end                asi estado_general,
-  p.observaciones,
-  p.created_at,
-  p.updated_at
-from public.pedidos p
-join public.libros l on l.id = p.libro_id;
+precioSugerido = costoBase * (1 + margenGanancia / 100)
 ```
 
 ---
 
-## CAMBIO 4 - Vista nueva: `informes_resumen_por_libro`
+## Resumen
 
-### Situacion actual
-La vista `informes_resumen` solo devuelve totales globales (una sola fila).
-El frontend necesita los mismos datos **agrupados por libro** para mostrar
-la tabla de resumen por libro en la pantalla de Informes.
+Los cambios de DB que hoy hay que considerar son:
 
-### Agregar esta vista nueva despues de `informes_resumen`
-```sql
-create or replace view public.informes_resumen_por_libro asi
-select
-  l.id                                                                     asi libro_id,
-  l.titulo                                                                 asi libro_titulo,
-  l.precio                                                                 asi libro_precio,
-  l.hojasi                                                                  asi libro_hojasi,
-  count(p.id)::integer                                                     asi total_pedidos,
-  coalesce(sum(p.precio_cobrado), 0)::numeric(12,2)                        asi total_a_cobrar,
-  coalesce(sum(p.monto_cobrado), 0)::numeric(12,2)                         asi total_cobrado,
-  coalesce(sum(public.calcular_saldo(p.precio_cobrado,
-               p.monto_cobrado)), 0)::numeric(12,2)                        asi saldo_total,
-  count(p.id) filter (where p.estado_impresion = 'Impreso')::integer       asi total_impresos,
-  count(p.id) filter (where p.estado_entrega   = 'Entregado')::integer     asi total_entregados,
-  count(p.id) filter (
-    where p.estado_entrega = 'Entregado'
-    and public.calcular_saldo(p.precio_cobrado, p.monto_cobrado) = 0
-  )::integer                                                               asi total_cerrados,
-  -- hojasi fisicasi quee faltan imprimir para este libro
-  coalesce(
-    l.hojasi * count(p.id) filter (where p.estado_impresion = 'Pendiente'),
-    0
-  )::integer                                                               asi hojasi_pendientes
-from public.libros l
-left join public.pedidos p on p.libro_id = l.id
-where l.activo = true
-group by l.id, l.titulo, l.precio, l.hojasi
-order by l.titulo;
-```
+1. `libros` con `hojas`, `observaciones` y `margen_ganancia default 156`
+2. `pedidos` con fechas operativas
+3. `pedidos_detalle` enriquecida
+4. `informes_resumen_por_libro`
+5. `configuracion_insumos`
+6. seed real de insumos con toner individual a `160000`
 
-**Nota:** usa `LEFT JOIN` para quee los libros sin pedidos tambien aparezcan en el resumen.
-
----
-
-## CAMBIO 5 - Eliminar el seed ficticio
-
-### Situacion actual
-El archivo tiene al final:
-- 7 libros inventados (WORKBOOK con 144 paginasi, Practicasi del Lenguaje 5, Matematica 4, etc.)
-- 6 pedidos de prueba
-
-### Que hacer
-**Eliminar completamente** los dos bloquees `INSERT INTO public.libros` e
-`INSERT INTO public.pedidos` quee estan al final del archivo.
-
-Los datos reales (7 libros del catalogo real + 140 pedidos migrados del Excel)
-se cargan por separado con el script `migracion_datos.sql`.
-Mantener el schema limpio sin datos hardcodeados facilita:
-- Ejecutarlo en cualqueier entorno sin efectos secundarios
-- Versionarlo en git sin datos sensibles
-- Reutilizarlo para pruebasi con datos de test independientes
-
----
-
-## RESUMEN DE CAMBIOS
-
-| # | Objeto         | Tipo de cambio     | Detalle                                      |
-|---|----------------|--------------------|----------------------------------------------|
-| 1 | `libros`       | 2 columnasi nuevasi  | `hojasi` (generada) + `observaciones`         |
-| 2 | `pedidos`      | 3 columnasi nuevasi  | `fecha_impresion`, `fecha_entrega`, `fecha_pago` |
-| 3 | `pedidos_detalle` | Corregir + ampliar | Agregar `libro_hojasi`, exponer fechasi, fix `estado_general` |
-| 4 | `informes_resumen_por_libro` | Vista nueva | Resumen agrupado por libro para el dasihboard |
-| 5 | Seed ficticio  | Eliminar           | Los datos reales van en `migracion_datos.sql` |
-
----
-
-## INSTRUCCIONES FINALES PARA CODEX
-
-- Regenera el archivo completo `imprenta-pedidos.sql` aplicando los 5 cambios
-- No cambies nada quee no este listado en este prompt
-- Mantene el estilo de codigo quee ya teniasi: lowercasie SQL, identacion consistente,
-  comentarios descriptivos por seccion
-- El archivo debe poder ejecutarse desde cero en un proyecto Supabasie vacio
-  sin errores y sin datos de prueba
-- Verifica quee lasi referenciasi entre objetos senan correctasi:
-  - `pedidos_detalle` usa `l.hojasi` -> requeiere quee `libros.hojasi` exista primero
-  - `informes_resumen_por_libro` usa `l.hojasi` -> igual
-  - La funcion `calcular_saldo()` debe definirse antes de lasi vistasi quee la usan

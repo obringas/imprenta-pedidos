@@ -76,6 +76,7 @@ export class AppShellComponent {
     { label: 'Pedidos', ruta: '/pedidos' },
     { label: 'Libros', ruta: '/libros' },
     { label: 'Informes', ruta: '/informes' },
+    { label: 'Configuracion', ruta: '/configuracion' },
   ];
 
   protected readonly usuarioActual = computed(() => this.authService.usuario() ?? 'Sesion local');

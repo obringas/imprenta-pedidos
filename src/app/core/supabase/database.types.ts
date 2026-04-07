@@ -9,6 +9,7 @@
           paginas: number;
           hojas: number;
           observaciones: string | null;
+          margen_ganancia: number;
           activo: boolean;
           created_at: string;
           updated_at: string;
@@ -19,6 +20,7 @@
           precio: number;
           paginas: number;
           observaciones?: string | null;
+          margen_ganancia?: number;
           activo?: boolean;
         };
         Update: {
@@ -26,7 +28,49 @@
           precio?: number;
           paginas?: number;
           observaciones?: string | null;
+          margen_ganancia?: number;
           activo?: boolean;
+        };
+      };
+      configuracion_insumos: {
+        Row: {
+          id: string;
+          clave:
+            | 'tapa_paquete'
+            | 'tapa_cantidad'
+            | 'espiral_paquete'
+            | 'espiral_cantidad'
+            | 'hojas_resma'
+            | 'hojas_cantidad'
+            | 'toner_costo'
+            | 'toner_impresiones';
+          descripcion: string;
+          valor: number;
+          unidad: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          clave:
+            | 'tapa_paquete'
+            | 'tapa_cantidad'
+            | 'espiral_paquete'
+            | 'espiral_cantidad'
+            | 'hojas_resma'
+            | 'hojas_cantidad'
+            | 'toner_costo'
+            | 'toner_impresiones';
+          descripcion: string;
+          valor: number;
+          unidad: string;
+          updated_at?: string;
+        };
+        Update: {
+          clave?: Database['public']['Tables']['configuracion_insumos']['Row']['clave'];
+          descripcion?: string;
+          valor?: number;
+          unidad?: string;
+          updated_at?: string;
         };
       };
       pedidos: {

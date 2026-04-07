@@ -44,6 +44,7 @@ export class LibrosFacade {
       precio: libro.precio,
       paginas: libro.paginas,
       observaciones: libro.observaciones,
+      margenGanancia: libro.margenGanancia,
       activo: !libro.activo,
     });
 

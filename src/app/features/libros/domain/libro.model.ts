@@ -5,6 +5,7 @@
   readonly paginas: number;
   readonly hojas: number;
   readonly observaciones: string | null;
+  readonly margenGanancia: number;
   readonly activo: boolean;
 }
 
@@ -13,6 +14,7 @@ export interface CrearLibroInput {
   readonly precio: number;
   readonly paginas: number;
   readonly observaciones: string | null;
+  readonly margenGanancia: number;
 }
 
 export interface ActualizarLibroInput extends CrearLibroInput {

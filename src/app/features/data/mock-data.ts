@@ -3,13 +3,13 @@ import { Pedido } from '../pedidos/domain/pedido.model';
 import { ESTADO_ENTREGA, ESTADO_IMPRESION, ESTADO_PAGO } from '../../shared/constants/negocio.constants';
 
 export const LIBROS_INICIALES: Libro[] = [
-  { id: 'libro-1', titulo: 'WORKBOOK', precio: 10300, paginas: 144, hojas: 72, observaciones: 'Uso intensivo al inicio del ciclo.', activo: true },
-  { id: 'libro-2', titulo: 'Cartilla 7ª', precio: 7500, paginas: 96, hojas: 48, observaciones: null, activo: true },
-  { id: 'libro-3', titulo: 'Sentir y pensar 2', precio: 8500, paginas: 80, hojas: 40, observaciones: null, activo: true },
-  { id: 'libro-4', titulo: 'Prácticas del Lenguaje 5', precio: 9200, paginas: 128, hojas: 64, observaciones: 'Precio acordado con el colegio.', activo: true },
-  { id: 'libro-5', titulo: 'Matemática 4', precio: 8800, paginas: 112, hojas: 56, observaciones: null, activo: true },
-  { id: 'libro-6', titulo: 'Cs. Naturales 6', precio: 9600, paginas: 120, hojas: 60, observaciones: null, activo: true },
-  { id: 'libro-7', titulo: 'Cartilla Inglés 7', precio: 7000, paginas: 72, hojas: 36, observaciones: 'Confirmar versión final del PDF.', activo: true },
+  { id: 'libro-1', titulo: 'WORKBOOK', precio: 10300, paginas: 144, hojas: 72, observaciones: 'Uso intensivo al inicio del ciclo.', margenGanancia: 156, activo: true },
+  { id: 'libro-2', titulo: 'Cartilla 7ª', precio: 7500, paginas: 96, hojas: 48, observaciones: null, margenGanancia: 156, activo: true },
+  { id: 'libro-3', titulo: 'Sentir y pensar 2', precio: 8500, paginas: 80, hojas: 40, observaciones: null, margenGanancia: 156, activo: true },
+  { id: 'libro-4', titulo: 'Prácticas del Lenguaje 5', precio: 9200, paginas: 128, hojas: 64, observaciones: 'Precio acordado con el colegio.', margenGanancia: 156, activo: true },
+  { id: 'libro-5', titulo: 'Matemática 4', precio: 8800, paginas: 112, hojas: 56, observaciones: null, margenGanancia: 156, activo: true },
+  { id: 'libro-6', titulo: 'Cs. Naturales 6', precio: 9600, paginas: 120, hojas: 60, observaciones: null, margenGanancia: 156, activo: true },
+  { id: 'libro-7', titulo: 'Cartilla Inglés 7', precio: 7000, paginas: 72, hojas: 36, observaciones: 'Confirmar versión final del PDF.', margenGanancia: 156, activo: true },
 ];
 
 export const PEDIDOS_INICIALES: Pedido[] = [

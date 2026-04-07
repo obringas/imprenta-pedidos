@@ -29,6 +29,11 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/informes/informes.routes').then((module) => module.INFORMES_ROUTES),
       },
+      {
+        path: 'configuracion',
+        loadChildren: () =>
+          import('./features/configuracion/configuracion.routes').then((module) => module.CONFIGURACION_ROUTES),
+      },
     ],
   },
   { path: '**', redirectTo: 'pedidos' },

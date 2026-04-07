@@ -1,5 +1,6 @@
 ﻿import { inject, Injectable } from '@angular/core';
 import { SUPABASE_CLIENT } from '../../../core/supabase/supabase.client';
+import { Database } from '../../../core/supabase/database.types';
 import { AppError } from '../../../shared/errors/app-error';
 import { LIBROS_INICIALES } from '../../data/mock-data';
 import { normalizarTextoMojibake } from '../../../shared/utils/text-normalizer';
@@ -32,6 +33,7 @@ export class LocalLibrosRepository implements LibrosRepository {
       paginas: input.paginas,
       hojas: Math.ceil(input.paginas / 2),
       observaciones: input.observaciones,
+      margenGanancia: input.margenGanancia,
       activo: true,
     };
 
@@ -48,6 +50,7 @@ export class LocalLibrosRepository implements LibrosRepository {
       titulo: input.titulo.trim(),
       hojas: Math.ceil(input.paginas / 2),
       observaciones: input.observaciones,
+      margenGanancia: input.margenGanancia,
     };
     const siguiente = libros.map((libro) => (libro.id === id ? libroActualizado : libro));
     this.guardar(siguiente);
@@ -65,6 +68,7 @@ export class LocalLibrosRepository implements LibrosRepository {
       ...libro,
       hojas: libro.hojas ?? Math.ceil(libro.paginas / 2),
       observaciones: libro.observaciones ?? null,
+      margenGanancia: libro.margenGanancia ?? 156,
       titulo: normalizarTextoMojibake(libro.titulo),
     }));
 
@@ -108,6 +112,7 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       precio: input.precio,
       paginas: input.paginas,
       observaciones: input.observaciones,
+      margen_ganancia: input.margenGanancia,
       activo: true,
     };
 
@@ -116,7 +121,7 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       throw AppError.inesperado(error);
     }
 
-    return this.mapLibro(data as { id: string; titulo: string; precio: number; paginas: number; hojas: number; observaciones: string | null; activo: boolean });
+    return this.mapLibro(data);
   }
 
   async update(id: string, input: ActualizarLibroInput): Promise<Libro> {
@@ -126,6 +131,7 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       precio: input.precio,
       paginas: input.paginas,
       observaciones: input.observaciones,
+      margen_ganancia: input.margenGanancia,
       activo: input.activo,
     };
 
@@ -134,7 +140,7 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       throw AppError.inesperado(error);
     }
 
-    return this.mapLibro(data as { id: string; titulo: string; precio: number; paginas: number; hojas: number; observaciones: string | null; activo: boolean });
+    return this.mapLibro(data);
   }
 
   private requireClient() {
@@ -145,7 +151,7 @@ export class SupabaseLibrosRepository implements LibrosRepository {
     return this.supabase;
   }
 
-  private mapLibro(row: { id: string; titulo: string; precio: number; paginas: number; hojas: number; observaciones: string | null; activo: boolean }): Libro {
+  private mapLibro(row: Database['public']['Tables']['libros']['Row']): Libro {
     return {
       id: row.id,
       titulo: row.titulo,
@@ -153,6 +159,7 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       paginas: row.paginas,
       hojas: row.hojas,
       observaciones: row.observaciones,
+      margenGanancia: Number(row.margen_ganancia),
       activo: row.activo,
     };
   }
