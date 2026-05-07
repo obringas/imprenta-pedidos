@@ -126,6 +126,23 @@ export class PedidosFacade {
     } satisfies ActualizarPedidoInput);
   }
 
+  async marcarPagado(pedido: PedidoDetalle): Promise<void> {
+    await this.actualizarPedido(pedido.id, {
+      libroId: pedido.libroId,
+      alumno: pedido.alumno,
+      division: pedido.division,
+      precioCobrado: pedido.precioCobrado,
+      estadoPago: 'Pagado',
+      montoCobrado: pedido.precioCobrado,
+      fechaPago: this.hoy(),
+      observaciones: pedido.observaciones,
+      estadoEntrega: pedido.estadoEntrega,
+      fechaEntrega: pedido.fechaEntrega,
+      estadoImpresion: pedido.estadoImpresion,
+      fechaImpresion: pedido.fechaImpresion,
+    } satisfies ActualizarPedidoInput);
+  }
+
   async toggleEntrega(pedido: PedidoDetalle): Promise<void> {
     const siguienteEstado = pedido.estadoEntrega === 'Entregado' ? 'Pendiente' : 'Entregado';
     await this.actualizarPedido(pedido.id, {

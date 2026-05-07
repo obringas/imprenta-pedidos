@@ -59,7 +59,6 @@ export class InformesFacade {
       .pedidos()
       .filter(
         (pedido) =>
-          pedido.estadoImpresion === 'Impreso' &&
           pedido.saldo > 0 &&
           this.coincideFiltros(pedido, libroId, busquedaAlumno),
       )
@@ -68,6 +67,14 @@ export class InformesFacade {
 
   totalSaldoPendiente(libroId: string | null, busquedaAlumno: string): number {
     return this.pendientesPagoPorLibro(libroId, busquedaAlumno).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
+  }
+
+  impresosPendientesPagoPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
+    return this.pendientesPagoPorLibro(libroId, busquedaAlumno).filter((pedido) => pedido.estadoImpresion === 'Impreso');
+  }
+
+  totalSaldoImpresoPendiente(libroId: string | null, busquedaAlumno: string): number {
+    return this.impresosPendientesPagoPorLibro(libroId, busquedaAlumno).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
   }
 
   faltanImprimirPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
@@ -125,32 +132,37 @@ export class InformesFacade {
   readonly resumenPorLibro = computed<ResumenLibro[]>(() => {
     const pedidos = this.pedidosFacade.pedidos();
 
-    return this.librosFacade.libros().map((libro) => {
-      const pedidosLibro = pedidos.filter((pedido) => pedido.libroId === libro.id);
-      const impresos = pedidosLibro.filter((pedido) => pedido.estadoImpresion === 'Impreso').length;
-      const pagados = pedidosLibro.filter((pedido) => pedido.estadoPago === 'Pagado').length;
-      const porCobrar = pedidosLibro.filter((pedido) => pedido.saldo > 0).length;
-      const cerrados = pedidosLibro.filter((pedido) => pedido.estadoGeneral === 'Cerrado').length;
-      const totalPedidos = pedidosLibro.length;
-      const porcentajeCerrado = totalPedidos === 0 ? 0 : Math.round((cerrados / totalPedidos) * 100);
-      const hojasPendientes = pedidosLibro
-        .filter((pedido) => pedido.estadoImpresion === 'Pendiente')
-        .reduce((acumulado, pedido) => acumulado + pedido.libroHojas, 0);
-
-      return {
-        libroId: libro.id,
-        libroTitulo: libro.titulo,
-        totalPedidos,
-        impresos,
-        pagados,
-        porCobrar,
-        cerrados,
-        porcentajeCerrado,
-        hojasPendientes,
-        semaforo: porcentajeCerrado >= 75 ? 'alto' : porcentajeCerrado >= 40 ? 'medio' : 'bajo',
-      };
-    });
+    return this.librosFacade
+      .libros()
+      .map((libro) => this.crearResumenLibro(libro.id, libro.titulo, pedidos))
+      .filter((resumen) => resumen.totalPedidos > 0 && resumen.porcentajeCerrado < 100);
   });
+
+  private crearResumenLibro(libroId: string, libroTitulo: string, pedidos: PedidoDetalle[]): ResumenLibro {
+    const pedidosLibro = pedidos.filter((pedido) => pedido.libroId === libroId);
+    const impresos = pedidosLibro.filter((pedido) => pedido.estadoImpresion === 'Impreso').length;
+    const pagados = pedidosLibro.filter((pedido) => pedido.estadoPago === 'Pagado').length;
+    const porCobrar = pedidosLibro.filter((pedido) => pedido.saldo > 0).length;
+    const cerrados = pedidosLibro.filter((pedido) => pedido.estadoGeneral === 'Cerrado').length;
+    const totalPedidos = pedidosLibro.length;
+    const porcentajeCerrado = totalPedidos === 0 ? 0 : Math.round((cerrados / totalPedidos) * 100);
+    const hojasPendientes = pedidosLibro
+      .filter((pedido) => pedido.estadoImpresion === 'Pendiente')
+      .reduce((acumulado, pedido) => acumulado + pedido.libroHojas, 0);
+
+    return {
+      libroId,
+      libroTitulo,
+      totalPedidos,
+      impresos,
+      pagados,
+      porCobrar,
+      cerrados,
+      porcentajeCerrado,
+      hojasPendientes,
+      semaforo: porcentajeCerrado >= 75 ? 'alto' : porcentajeCerrado >= 40 ? 'medio' : 'bajo',
+    };
+  }
 
   private coincideFiltros(pedido: PedidoDetalle, libroId: string | null, busquedaAlumno: string): boolean {
     const coincideLibro = !libroId || pedido.libroId === libroId;
