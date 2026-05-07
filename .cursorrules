@@ -1,0 +1,14 @@
+# Cursor Rules
+
+La fuente de verdad del protocolo de trabajo para agentes IA en este proyecto es el archivo `AGENTS.md` ubicado en la raíz.
+
+Antes de ejecutar cualquier tarea, leé `AGENTS.md` completo y seguí el protocolo allí definido:
+
+1. Verificar estructura de `/docs` (crear o normalizar si es necesario).
+2. Leer los 9 archivos de `/docs` en orden numérico.
+3. Aplicar Clean Code, SOLID, DRY y KISS.
+4. Respetar las convenciones definidas en `/docs/04-conventions.md`.
+5. Cumplir las reglas obligatorias de `/docs/05-ai-rules.md`.
+6. Registrar todo cambio en `/docs/07-changelog.md` al finalizar.
+
+No escribas código sin haber leído antes `AGENTS.md` y la carpeta `/docs`.
