@@ -1,23 +1,25 @@
-# docs/ — Documentacion del proyecto ImprentaPedidos
+# Documentacion
 
-> Para agentes de IA: leer primero `/AGENTS.md` en la raiz del repositorio.
+Indice estandar de documentacion del proyecto ImprentaPedidos.
 
----
+## Orden obligatorio de lectura
 
-## Archivos en esta carpeta
+1. [`01-context.md`](./01-context.md)
+2. [`02-architecture.md`](./02-architecture.md)
+3. [`03-setup.md`](./03-setup.md)
+4. [`04-conventions.md`](./04-conventions.md)
+5. [`05-ai-rules.md`](./05-ai-rules.md)
+6. [`06-decisions.md`](./06-decisions.md)
+7. [`07-changelog.md`](./07-changelog.md)
+8. [`08-known-issues.md`](./08-known-issues.md)
 
-| Archivo | Proposito |
-|---|---|
-| [`CONTEXT.md`](./CONTEXT.md) | Contexto de negocio, stack, features y estado de implementacion |
-| [`STANDARDS.md`](./STANDARDS.md) | Estandares de codigo (SOLID, Clean Code, Angular) + diseno UI responsive |
-| [`esquema-base-de-datos.md`](./esquema-base-de-datos.md) | Schema Supabase completo (tablas, vistas, enums, RLS) — fuente de verdad |
-| [`prompt_codex_final.md`](./prompt_codex_final.md) | Referencia completa: SQL, seed datos, estructura de carpetas, constantes, plan |
+## Referencias heredadas
 
----
+Mientras se completa la migracion documental, pueden existir archivos heredados con mas detalle historico:
 
-## Criterio de actualizacion
+- `CONTEXT.md`
+- `STANDARDS.md`
+- `esquema-base-de-datos.md`
+- `prompt_codex_final.md`
 
-- `CONTEXT.md` → actualizar cuando cambia el estado de implementacion o las features
-- `STANDARDS.md` → actualizar cuando se adoptan nuevos estandares o se revisan existentes
-- `esquema-base-de-datos.md` → actualizar cuando cambia el schema de Supabase
-- `prompt_codex_final.md` → actualizar el plan vivo (secciones 12/13) al completar fases
+Si hay contradiccion, prevalecen los archivos numerados y luego el changelog mas reciente.
