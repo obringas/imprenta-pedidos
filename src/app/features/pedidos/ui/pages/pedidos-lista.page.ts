@@ -68,7 +68,7 @@ import { PedidosFacade } from '../../state/pedidos.facade';
           <span>Libro</span>
           <select [value]="facade.filtros().libroId ?? ''" (change)="actualizarLibro($any($event.target).value)">
             <option value="">Todos</option>
-            @for (libro of librosFacade.libros(); track libro.id) {
+            @for (libro of librosFacade.activos(); track libro.id) {
               <option [value]="libro.id">{{ libro.titulo }}</option>
             }
           </select>
@@ -103,6 +103,17 @@ import { PedidosFacade } from '../../state/pedidos.facade';
         </div>
       </div>
 
+      @if (facade.ocultosPorLibroInactivo()) {
+        <label class="field inline-check">
+          <input
+            type="checkbox"
+            [checked]="facade.filtros().incluirInactivos"
+            (change)="actualizarIncluirInactivos($any($event.target).checked)"
+          />
+          <span>Incluir libros inactivos ({{ facade.ocultosPorLibroInactivo() }} pedidos)</span>
+        </label>
+      }
+
       <div class="filters-actions">
         <button type="button" class="secondary-button" (click)="limpiarTodos()">Limpiar todos los filtros</button>
         <span class="caption">{{ totalPedidosFiltrados() }} pedidos visibles</span>
@@ -130,7 +141,7 @@ import { PedidosFacade } from '../../state/pedidos.facade';
               <span>Libro</span>
               <select [value]="facade.filtros().libroId ?? ''" (change)="actualizarLibro($any($event.target).value)">
                 <option value="">Todos</option>
-                @for (libro of librosFacade.libros(); track libro.id) {
+                @for (libro of librosFacade.activos(); track libro.id) {
                   <option [value]="libro.id">{{ libro.titulo }}</option>
                 }
               </select>
@@ -164,6 +175,17 @@ import { PedidosFacade } from '../../state/pedidos.facade';
               }
             </div>
           </div>
+
+          @if (facade.ocultosPorLibroInactivo()) {
+            <label class="field inline-check">
+              <input
+                type="checkbox"
+                [checked]="facade.filtros().incluirInactivos"
+                (change)="actualizarIncluirInactivos($any($event.target).checked)"
+              />
+              <span>Incluir libros inactivos ({{ facade.ocultosPorLibroInactivo() }} pedidos)</span>
+            </label>
+          }
 
           <div class="filters-actions">
             <button type="button" class="secondary-button" (click)="limpiarTodos()">Limpiar todo</button>
@@ -319,6 +341,12 @@ export class PedidosListaPageComponent {
             clear: () => this.limpiarEstadoPago(),
           }
         : null,
+      filtros.incluirInactivos
+        ? {
+            label: 'Incluye libros inactivos',
+            clear: () => this.actualizarIncluirInactivos(false),
+          }
+        : null,
     ].filter((item): item is { label: string; clear: () => void } => item !== null);
   });
 
@@ -339,6 +367,10 @@ export class PedidosListaPageComponent {
 
   protected actualizarLibro(valor: string): void {
     this.facade.actualizarFiltros({ libroId: valor || null });
+  }
+
+  protected actualizarIncluirInactivos(valor: boolean): void {
+    this.facade.actualizarFiltros({ incluirInactivos: valor });
   }
 
   protected toggleEstadoGeneral(estado: EstadoGeneral): void {

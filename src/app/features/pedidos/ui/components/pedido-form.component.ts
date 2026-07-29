@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
@@ -26,8 +26,8 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
         <label class="field">
           <span>Libro</span>
           <select formControlName="libroId" [class.input-invalid]="mostrarError('libroId')">
-            @for (libro of librosFacade.activos(); track libro.id) {
-              <option [value]="libro.id">{{ libro.titulo }}</option>
+            @for (libro of librosDisponibles(); track libro.id) {
+              <option [value]="libro.id">{{ libro.titulo }}{{ libro.activo ? '' : ' (inactivo)' }}</option>
             }
           </select>
           @if (mostrarError('libroId')) {
@@ -180,6 +180,24 @@ export class PedidoFormComponent {
   readonly formSubmitted = output<Record<string, unknown>>();
 
   protected readonly librosFacade = inject(LibrosFacade);
+
+  /**
+   * Libros elegibles. Se ofrecen los activos y, al editar, tambien el libro
+   * del pedido aunque este dado de baja: sin esto el select quedaria vacio y
+   * al guardar se cambiaria el libro sin querer.
+   */
+  protected readonly librosDisponibles = computed(() => {
+    const activos = this.librosFacade.activos();
+    const actual = this.pedido()?.libroId;
+
+    if (!actual || activos.some((libro) => libro.id === actual)) {
+      return activos;
+    }
+
+    const libroDelPedido = this.librosFacade.obtenerPorId(actual);
+    return libroDelPedido ? [libroDelPedido, ...activos] : activos;
+  });
+
   protected readonly ESTADO_PAGO = ESTADO_PAGO;
   protected readonly ESTADO_IMPRESION = ESTADO_IMPRESION;
   protected readonly ESTADO_ENTREGA = ESTADO_ENTREGA;

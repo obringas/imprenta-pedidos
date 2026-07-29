@@ -1,4 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
+import { normalizarParaBusqueda } from '../../../shared/utils/text-normalizer';
 import { LibrosFacade } from '../../libros/state/libros.facade';
 import { PedidoDetalle } from '../../pedidos/domain/pedido.model';
 import { PedidosFacade } from '../../pedidos/state/pedidos.facade';
@@ -30,7 +31,7 @@ export class InformesFacade {
   private readonly limiteToner = 22000;
 
   readonly kpis = computed(() => {
-    const pedidos = this.pedidosFacade.pedidos();
+    const pedidos = this.pedidosFacade.pedidosDeLibrosActivos();
     const pendientesImprimir = pedidos.filter((pedido) => pedido.estadoImpresion === 'Pendiente');
     const impresos = pedidos.filter((pedido) => pedido.estadoImpresion === 'Impreso');
     const hojasPendientes = pendientesImprimir.reduce((acumulado, pedido) => acumulado + pedido.libroHojas, 0);
@@ -56,7 +57,7 @@ export class InformesFacade {
 
   pendientesPagoPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
     return this.pedidosFacade
-      .pedidos()
+      .pedidosDeLibrosActivos()
       .filter(
         (pedido) =>
           pedido.saldo > 0 &&
@@ -79,13 +80,13 @@ export class InformesFacade {
 
   faltanImprimirPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
     return this.pedidosFacade
-      .pedidos()
+      .pedidosDeLibrosActivos()
       .filter((pedido) => pedido.estadoImpresion === 'Pendiente' && this.coincideFiltros(pedido, libroId, busquedaAlumno));
   }
 
   sinEntregarPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
     return this.pedidosFacade
-      .pedidos()
+      .pedidosDeLibrosActivos()
       .filter(
         (pedido) =>
           pedido.estadoImpresion === 'Impreso' &&
@@ -130,10 +131,10 @@ export class InformesFacade {
   }
 
   readonly resumenPorLibro = computed<ResumenLibro[]>(() => {
-    const pedidos = this.pedidosFacade.pedidos();
+    const pedidos = this.pedidosFacade.pedidosDeLibrosActivos();
 
     return this.librosFacade
-      .libros()
+      .activos()
       .map((libro) => this.crearResumenLibro(libro.id, libro.titulo, pedidos))
       .filter((resumen) => resumen.totalPedidos > 0 && resumen.porcentajeCerrado < 100);
   });
@@ -166,8 +167,8 @@ export class InformesFacade {
 
   private coincideFiltros(pedido: PedidoDetalle, libroId: string | null, busquedaAlumno: string): boolean {
     const coincideLibro = !libroId || pedido.libroId === libroId;
-    const texto = busquedaAlumno.trim().toLowerCase();
-    const coincideAlumno = !texto || pedido.alumno.toLowerCase().includes(texto);
+    const texto = normalizarParaBusqueda(busquedaAlumno);
+    const coincideAlumno = !texto || normalizarParaBusqueda(pedido.alumno).includes(texto);
     return coincideLibro && coincideAlumno;
   }
 }

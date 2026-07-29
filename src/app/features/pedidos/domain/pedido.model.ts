@@ -23,6 +23,8 @@ export interface Pedido {
 export interface PedidoDetalle extends Pedido {
   readonly saldo: number;
   readonly estadoGeneral: EstadoGeneral;
+  /** Derivado del catalogo, no se persiste. Define si el pedido entra en las vistas operativas. */
+  readonly libroActivo: boolean;
 }
 
 export interface CrearPedidoInput {
@@ -48,5 +50,7 @@ export interface FiltroPedidos {
   readonly libroId: string | null;
   readonly estadoGeneral: EstadoGeneral | null;
   readonly estadoPago: EstadoPago | null;
+  /** Por defecto false: la operacion diaria solo mira libros activos. */
+  readonly incluirInactivos: boolean;
 }
 

@@ -19,7 +19,20 @@ export class PedidosFacade {
   readonly filtros = this.store.filtros.asReadonly();
   readonly pedidosFiltrados = this.store.pedidosFiltrados;
   readonly estadisticas = this.store.estadisticas;
-  readonly pedidosListos = computed(() => this.store.pedidos().filter((pedido) => pedido.estadoGeneral === 'Listo p/entregar'));
+  readonly ocultosPorLibroInactivo = this.store.ocultosPorLibroInactivo;
+
+  /**
+   * Pedidos del catalogo vigente. A diferencia de `pedidosVisibles` del store,
+   * no depende del filtro de pantalla: los informes siempre ignoran los libros
+   * dados de baja.
+   */
+  readonly pedidosDeLibrosActivos = computed(() =>
+    this.store.pedidos().filter((pedido) => pedido.libroActivo),
+  );
+
+  readonly pedidosListos = computed(() =>
+    this.pedidosDeLibrosActivos().filter((pedido) => pedido.estadoGeneral === 'Listo p/entregar'),
+  );
 
   async cargar(): Promise<void> {
     this.store.loading.set(true);
@@ -38,7 +51,13 @@ export class PedidosFacade {
   }
 
   limpiarFiltros(): void {
-    this.store.filtros.set({ busqueda: '', libroId: null, estadoGeneral: null, estadoPago: null });
+    this.store.filtros.set({
+      busqueda: '',
+      libroId: null,
+      estadoGeneral: null,
+      estadoPago: null,
+      incluirInactivos: false,
+    });
   }
 
   async crearPedido(input: unknown) {
@@ -163,7 +182,16 @@ export class PedidosFacade {
 
   private aDetalle(pedido: Pedido): PedidoDetalle {
     const saldo = calcularSaldo(pedido.precioCobrado, pedido.montoCobrado);
-    return { ...pedido, saldo, estadoGeneral: determinarEstadoGeneral(pedido) };
+    const libro = this.librosFacade.obtenerPorId(pedido.libroId);
+
+    return {
+      ...pedido,
+      saldo,
+      estadoGeneral: determinarEstadoGeneral(pedido),
+      // Ante un libro que no figura en el catalogo cargado, se muestra el
+      // pedido: es preferible ver un dato de mas que perderlo de vista.
+      libroActivo: libro?.activo ?? true,
+    };
   }
 
   private hoy(): string {

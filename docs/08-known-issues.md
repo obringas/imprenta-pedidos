@@ -34,6 +34,23 @@ Configuracion de entorno y repositorios Supabase.
 ### Recomendacion
 Cargar credenciales reales en environment seguro y validar flujos principales contra Supabase.
 
+## Sin unique constraint en pedidos por libro y alumno
+
+### Fecha
+2026-07-29
+
+### Descripcion
+`public.pedidos` no tiene unique constraint sobre `(libro_id, alumno)`. Nada impide cargar dos veces el mismo pedido para el mismo alumno y libro, ni desde la UI ni por SQL. Los scripts de carga masiva tienen que protegerse solos con `where not exists`.
+
+### Impacto
+Medio.
+
+### Modulo afectado
+`supabase/imprenta-pedidos.sql`, `src/app/features/pedidos/data/pedidos.repository.ts`
+
+### Recomendacion
+Evaluar un unique constraint o un indice unico parcial. Antes de aplicarlo hay que confirmar con la usuaria si un mismo alumno puede pedir dos ejemplares del mismo libro, caso en el que el constraint no corresponde y la validacion deberia ser una advertencia en la UI.
+
 ## Documentacion heredada pendiente de fusion final
 
 ### Fecha
