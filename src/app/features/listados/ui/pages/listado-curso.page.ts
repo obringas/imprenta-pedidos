@@ -5,6 +5,7 @@ import { LibrosFacade } from '../../../libros/state/libros.facade';
 import { PedidoDetalle } from '../../../pedidos/domain/pedido.model';
 import { PedidosFacade } from '../../../pedidos/state/pedidos.facade';
 import { ExportarListadoService, FilaListado } from '../../data/exportar-listado.service';
+import { CorreccionAlumno, EditarAlumnoDialogComponent } from '../components/editar-alumno-dialog.component';
 import {
   claveDivision,
   claveGrado,
@@ -25,7 +26,7 @@ interface CriteriosBusqueda {
 @Component({
   selector: 'app-listado-curso-page',
   standalone: true,
-  imports: [EmptyStateComponent],
+  imports: [EmptyStateComponent, EditarAlumnoDialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="page-header">
@@ -103,24 +104,44 @@ interface CriteriosBusqueda {
           </button>
         </section>
 
+        <p class="caption listado-ayuda">Doble clic en una fila para corregirla sin salir de la pantalla.</p>
+
         <section class="card table-card">
           <table class="data-table compact-table">
             <thead>
               <tr>
                 <th>Alumno</th>
                 <th>Grado - División</th>
+                <th><span class="sr-only">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
               @for (fila of resultados(); track fila.id) {
-                <tr>
+                <tr class="fila-editable" (dblclick)="abrirEdicion(fila.id)">
                   <td>{{ fila.alumno }}</td>
                   <td>{{ fila.curso }}</td>
+                  <td class="celda-accion">
+                    <button
+                      type="button"
+                      class="secondary-button boton-editar"
+                      [attr.aria-label]="'Editar ' + fila.alumno"
+                      (click)="abrirEdicion(fila.id)"
+                    >
+                      Editar
+                    </button>
+                  </td>
                 </tr>
               }
             </tbody>
           </table>
         </section>
+
+        <app-editar-alumno-dialog
+          [pedido]="pedidoEnEdicion()"
+          [guardando]="guardandoEdicion()"
+          (confirmado)="guardarEdicion($event)"
+          (cancelado)="cerrarEdicion()"
+        />
       } @else {
         <app-empty-state
           title="No hay pedidos para ese filtro"
@@ -141,6 +162,17 @@ export class ListadoCursoPageComponent {
   protected readonly divisionSeleccionada = signal(TODOS);
   protected readonly criteriosAplicados = signal<CriteriosBusqueda | null>(null);
   protected readonly descargando = signal(false);
+  protected readonly idEnEdicion = signal<string | null>(null);
+  protected readonly guardandoEdicion = signal(false);
+
+  /**
+   * Se resuelve contra el store en vez de guardar una copia, para que el
+   * dialogo refleje el pedido actualizado despues de guardar.
+   */
+  protected readonly pedidoEnEdicion = computed(() => {
+    const id = this.idEnEdicion();
+    return id ? this.pedidosFacade.obtenerPorId(id) : null;
+  });
 
   /** Pedidos del libro elegido. Base para poblar los selectores de curso. */
   private readonly pedidosDelLibro = computed(() => {
@@ -253,6 +285,41 @@ export class ListadoCursoPageComponent {
       this.toastService.error('No se pudo generar el archivo.');
     } finally {
       this.descargando.set(false);
+    }
+  }
+
+  protected abrirEdicion(idPedido: string): void {
+    this.idEnEdicion.set(idPedido);
+  }
+
+  protected cerrarEdicion(): void {
+    this.idEnEdicion.set(null);
+  }
+
+  protected async guardarEdicion(correccion: CorreccionAlumno): Promise<void> {
+    const pedido = this.pedidoEnEdicion();
+    if (!pedido) return;
+
+    this.guardandoEdicion.set(true);
+    try {
+      const resultado = await this.pedidosFacade.corregirDatosDelAlumno(
+        pedido,
+        correccion.alumno,
+        correccion.division,
+      );
+
+      if (!resultado.success) {
+        this.toastService.error(resultado.error.mensaje);
+        return;
+      }
+
+      this.toastService.success('Pedido actualizado.');
+      this.cerrarEdicion();
+    } catch (error) {
+      console.error('Error al corregir el pedido desde el listado', error);
+      this.toastService.error('No se pudo guardar el cambio.');
+    } finally {
+      this.guardandoEdicion.set(false);
     }
   }
 

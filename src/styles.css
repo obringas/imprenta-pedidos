@@ -581,3 +581,9 @@ textarea:focus-visible {
   .listado-resumen { flex-direction: column; align-items: stretch; }
   .listado-resumen .primary-button { width: 100%; }
 }
+.listado-ayuda { margin-bottom: 0.5rem; }
+.fila-editable { cursor: pointer; }
+.fila-editable:hover { background: rgba(91, 56, 176, 0.06); }
+.celda-accion { width: 1%; white-space: nowrap; text-align: right; }
+/* 44px es el minimo tactil que respeta el resto de la app; no bajar. */
+.boton-editar { min-height: 44px; padding: 0.5rem 1.1rem; }

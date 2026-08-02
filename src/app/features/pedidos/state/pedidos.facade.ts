@@ -162,6 +162,28 @@ export class PedidosFacade {
     } satisfies ActualizarPedidoInput);
   }
 
+  /**
+   * Corrige alumno y division sin tocar precios ni estados. Pensado para la
+   * edicion rapida desde el listado por curso, donde lo unico visible (y lo
+   * que suele venir mal de una carga masiva) son esos dos datos.
+   */
+  async corregirDatosDelAlumno(pedido: PedidoDetalle, alumno: string, division: string | null) {
+    return this.actualizarPedido(pedido.id, {
+      libroId: pedido.libroId,
+      alumno,
+      division,
+      precioCobrado: pedido.precioCobrado,
+      estadoPago: pedido.estadoPago,
+      montoCobrado: pedido.montoCobrado,
+      fechaPago: pedido.fechaPago,
+      observaciones: pedido.observaciones,
+      estadoImpresion: pedido.estadoImpresion,
+      fechaImpresion: pedido.fechaImpresion,
+      estadoEntrega: pedido.estadoEntrega,
+      fechaEntrega: pedido.fechaEntrega,
+    } satisfies ActualizarPedidoInput);
+  }
+
   async toggleEntrega(pedido: PedidoDetalle): Promise<void> {
     const siguienteEstado = pedido.estadoEntrega === 'Entregado' ? 'Pendiente' : 'Entregado';
     await this.actualizarPedido(pedido.id, {
