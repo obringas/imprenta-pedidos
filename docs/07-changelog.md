@@ -1,5 +1,48 @@
 # 07-changelog.md - Memoria de cambios
 
+## [2026-07-30] - Agente: Claude
+
+### Cambios
+- Nueva pagina `/listados`: filtra por libro activo, grado y division, y descarga la nomina en Excel.
+- El archivo generado tiene dos columnas, `Alumno` y `Grado - División`, con encabezado fijo.
+- Nuevo item `Listados` en la navegacion. La barra inferior pasa a 5 columnas y `Configuracion` se abrevia a `Config.` para que ningun rotulo se corte en 375px.
+- Se agrego `supabase/pedidos_bajo_el_jacaranda_6a.sql` con los 13 pedidos de 6to A del libro "Bajo el jacaranda - Margara Averbach".
+
+### Motivo
+Hacia falta poder imprimir o compartir la nomina de un curso sin exportar todo el sistema. El script SQL corresponde al segundo curso del mismo libro: comparte `libro_id` con 6to B y se distingue por `division`.
+
+### Archivos afectados
+- `src/app/features/listados/domain/curso.util.ts`
+- `src/app/features/listados/domain/curso.util.spec.ts`
+- `src/app/features/listados/data/exportar-listado.service.ts`
+- `src/app/features/listados/ui/pages/listado-curso.page.ts`
+- `src/app/features/listados/listados.routes.ts`
+- `src/app/app.routes.ts`
+- `src/app/core/layout/app-shell.component.ts`
+- `src/styles.css`
+- `package.json`
+- `supabase/pedidos_bajo_el_jacaranda_6a.sql`
+
+### Decisiones tomadas
+La base no tiene columna `grado`: guarda el curso en el texto libre `pedidos.division`. En lugar de migrar el schema, `curso.util.ts` interpreta ese campo y separa grado de division. Asi conviven los formatos nuevos (`6A`) con los heredados (`A`, `7 B`, vacio) sin reescribir datos historicos. Los valores sin grado se agrupan como `Sin grado` y quedan visibles, para que se note que hay datos por normalizar.
+
+Los selectores se arman con los valores que existen en los pedidos del libro elegido, no con una lista fija, y las divisiones se acotan al grado seleccionado para no ofrecer combinaciones vacias.
+
+Se sumo la dependencia `write-excel-file`. Se eligio sobre `exceljs` (21 MB descomprimido) y `xlsx` (la version de npm esta desactualizada y con vulnerabilidades conocidas). Es browser-first y solo entra en el chunk lazy de la pagina: el bundle inicial crecio 0,6 kB.
+
+La exportacion vive en un servicio aparte para que la pagina no dependa de la libreria.
+
+### Validaciones realizadas
+- `npm run build` y `npm test` (19 de 19).
+- Validacion manual en viewport 375x812: se genero una descarga real, verificada como ZIP OOXML valido (`PK`, con `[Content_Types].xml`, `xl/workbook.xml`, `xl/styles.xml`, `xl/sharedStrings.xml`) y MIME de xlsx.
+- Caso heredado verificado: un pedido con division `B` sin grado se agrupa bajo `Sin grado` y se exporta como `Sin grado B`.
+- Barra inferior con 5 items medida en 375px: ningun rotulo se corta y no hay scroll horizontal.
+- Verificacion de encoding y de ausencia de caracteres invisibles en los 13 nombres del script SQL.
+- El script SQL no se ejecuto contra la base: queda a cargo del usuario desde el SQL Editor.
+
+### Pendientes / Follow-ups
+- Los datos heredados con division `A`, `C` o `7 B` conviene normalizarlos al formato `7A`. Hasta entonces aparecen como `Sin grado`.
+
 ## [2026-07-29] - Agente: Claude
 
 ### Cambios

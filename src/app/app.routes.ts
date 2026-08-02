@@ -30,6 +30,11 @@ export const routes: Routes = [
           import('./features/informes/informes.routes').then((module) => module.INFORMES_ROUTES),
       },
       {
+        path: 'listados',
+        loadChildren: () =>
+          import('./features/listados/listados.routes').then((module) => module.LISTADOS_ROUTES),
+      },
+      {
         path: 'configuracion',
         loadChildren: () =>
           import('./features/configuracion/configuracion.routes').then((module) => module.CONFIGURACION_ROUTES),

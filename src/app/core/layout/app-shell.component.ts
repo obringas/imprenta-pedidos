@@ -6,6 +6,8 @@ import { AuthService } from '../auth/auth.service';
 type NavItem = {
   readonly label: string;
   readonly ruta: string;
+  /** Version abreviada para la barra inferior, donde hay 5 items en 375px. */
+  readonly labelCorto?: string;
 };
 
 @Component({
@@ -59,7 +61,7 @@ type NavItem = {
         <nav class="bottom-nav" aria-label="Navegacion inferior">
           @for (item of navItems; track item.ruta) {
             <a [routerLink]="item.ruta" routerLinkActive="bottom-nav-active" class="bottom-nav-item" [attr.aria-label]="'Ir a ' + item.label">
-              {{ item.label }}
+              {{ item.labelCorto ?? item.label }}
             </a>
           }
         </nav>
@@ -76,7 +78,8 @@ export class AppShellComponent {
     { label: 'Pedidos', ruta: '/pedidos' },
     { label: 'Libros', ruta: '/libros' },
     { label: 'Informes', ruta: '/informes' },
-    { label: 'Configuracion', ruta: '/configuracion' },
+    { label: 'Listados', ruta: '/listados' },
+    { label: 'Configuracion', ruta: '/configuracion', labelCorto: 'Config.' },
   ];
 
   protected readonly usuarioActual = computed(() => this.authService.usuario() ?? 'Sesion local');
