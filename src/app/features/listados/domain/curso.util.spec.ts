@@ -1,4 +1,11 @@
-import { SIN_GRADO, compararGrados, etiquetaCurso, parsearCurso } from './curso.util';
+import {
+  SIN_DIVISION,
+  SIN_GRADO,
+  compararDivisiones,
+  compararGrados,
+  etiquetaCurso,
+  parsearCurso,
+} from './curso.util';
 
 describe('parsearCurso', () => {
   it('debería separar grado y división del formato actual', () => {
@@ -39,5 +46,16 @@ describe('compararGrados', () => {
   it('debería ordenar numéricamente y dejar Sin grado al final', () => {
     const ordenados = ['6', SIN_GRADO, '2', '10'].sort(compararGrados);
     expect(ordenados).toEqual(['2', '6', '10', SIN_GRADO]);
+  });
+
+  it('no debería ordenar como texto: 10 va después de 6', () => {
+    expect(compararGrados('10', '6')).toBeGreaterThan(0);
+  });
+});
+
+describe('compararDivisiones', () => {
+  it('debería ordenar alfabéticamente y dejar Sin division al final', () => {
+    const ordenados = ['C', SIN_DIVISION, 'A', 'B'].sort(compararDivisiones);
+    expect(ordenados).toEqual(['A', 'B', 'C', SIN_DIVISION]);
   });
 });

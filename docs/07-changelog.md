@@ -3,6 +3,8 @@
 ## [2026-07-31] - Agente: Claude
 
 ### Cambios
+- La tabla del listado por curso se ordena haciendo clic en `Alumno` o en `Grado - División`. Un segundo clic invierte el sentido.
+- El orden elegido es el que se exporta al Excel.
 - Edicion rapida desde el listado por curso: doble clic en una fila abre un dialogo para corregir alumno y division sin salir de la pantalla.
 - Cada fila suma un boton `Editar`, porque en celular no existe el doble clic.
 - El campo division muestra en vivo como se va a interpretar el valor (`7 B` se lee como `7B`).
@@ -13,16 +15,22 @@ Cuando aparecia un dato mal cargado habia que salir del listado, ir a Pedidos, b
 ### Archivos afectados
 - `src/app/features/listados/ui/components/editar-alumno-dialog.component.ts`
 - `src/app/features/listados/ui/pages/listado-curso.page.ts`
+- `src/app/features/listados/domain/curso.util.spec.ts`
 - `src/app/features/pedidos/state/pedidos.facade.ts`
 - `src/styles.css`
 
 ### Decisiones tomadas
+El orden por curso reutiliza `compararGrados` y `compararDivisiones`, los mismos comparadores que ya poblaban los selectores. Ordenar como texto pondria `10A` antes que `6A`. Cuando dos filas comparten curso, desempata por nombre.
+
+Los encabezados ordenables son `button` dentro del `th`, no un `th` con click: asi funcionan con teclado y el `aria-sort` anuncia el estado a lectores de pantalla.
+
 El dialogo solo expone alumno y division, que es lo que la pantalla muestra y lo que suele venir mal de una carga masiva. Para el resto del pedido sigue estando la pantalla de detalle. `PedidosFacade.corregirDatosDelAlumno` reenvia el resto de los campos sin tocarlos, siguiendo el patron de los `toggle` ya existentes, de modo que precio, estados y montos no se alteran.
 
 El pedido en edicion se resuelve contra el store por id en vez de copiarse, para que el dialogo no quede desincronizado despues de guardar.
 
 ### Validaciones realizadas
-- `npm run build` y `npm test` (19 de 19).
+- `npm run build` y `npm test` (21 de 21).
+- Orden verificado con datos sembrados: ascendente por curso da `2B, 6A, 6A, 6B, 10A, Sin grado B`. `10A` queda despues de `6B` y no antes, que es lo que pasaria con orden alfabetico. El segundo clic invierte y `aria-sort` acompana. Los encabezados responden a teclado y miden 44px de alto.
 - Validacion manual en viewport 375x812: doble clic abre el dialogo con los datos reales; guardar persiste y actualiza la fila; los selectores de grado y division se recalculan solos; cancelar descarta y al reabrir no quedan valores viejos.
 - Verificado que precio, estados de pago, impresion y entrega quedan intactos tras la correccion.
 - Validaciones de formulario probadas: alumno menor a 2 caracteres y division mayor a 10 bloquean el guardado.

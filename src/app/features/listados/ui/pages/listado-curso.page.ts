@@ -14,8 +14,18 @@ import {
   etiquetaCurso,
   parsearCurso,
 } from '../../domain/curso.util';
+// compararGrados y compararDivisiones ya se usaban para poblar los selectores;
+// aca se reutilizan para ordenar la tabla con el mismo criterio.
 
 const TODOS = '';
+
+type ColumnaOrden = 'alumno' | 'curso';
+
+interface FilaResultado {
+  readonly alumno: string;
+  readonly grado: string;
+  readonly division: string;
+}
 
 interface CriteriosBusqueda {
   readonly libroId: string;
@@ -110,8 +120,16 @@ interface CriteriosBusqueda {
           <table class="data-table compact-table">
             <thead>
               <tr>
-                <th>Alumno</th>
-                <th>Grado - División</th>
+                <th [attr.aria-sort]="estadoOrden('alumno')">
+                  <button type="button" class="th-orden" (click)="ordenarPor('alumno')">
+                    Alumno <span class="th-orden-icono" aria-hidden="true">{{ iconoOrden('alumno') }}</span>
+                  </button>
+                </th>
+                <th [attr.aria-sort]="estadoOrden('curso')">
+                  <button type="button" class="th-orden" (click)="ordenarPor('curso')">
+                    Grado - División <span class="th-orden-icono" aria-hidden="true">{{ iconoOrden('curso') }}</span>
+                  </button>
+                </th>
                 <th><span class="sr-only">Acciones</span></th>
               </tr>
             </thead>
@@ -164,6 +182,8 @@ export class ListadoCursoPageComponent {
   protected readonly descargando = signal(false);
   protected readonly idEnEdicion = signal<string | null>(null);
   protected readonly guardandoEdicion = signal(false);
+  protected readonly ordenColumna = signal<ColumnaOrden>('alumno');
+  protected readonly ordenAscendente = signal(true);
 
   /**
    * Se resuelve contra el store en vez de guardar una copia, para que el
@@ -203,15 +223,23 @@ export class ListadoCursoPageComponent {
     const criterios = this.criteriosAplicados();
     if (!criterios) return [];
 
+    const sentido = this.ordenAscendente() ? 1 : -1;
+    const columna = this.ordenColumna();
+
     return this.pedidosFacade
       .pedidosDeLibrosActivos()
       .filter((pedido) => this.coincide(pedido, criterios))
-      .map((pedido) => ({
-        id: pedido.id,
-        alumno: pedido.alumno,
-        curso: etiquetaCurso(parsearCurso(pedido.division)),
-      }))
-      .sort((uno, otro) => uno.alumno.localeCompare(otro.alumno, 'es'));
+      .map((pedido) => {
+        const curso = parsearCurso(pedido.division);
+        return {
+          id: pedido.id,
+          alumno: pedido.alumno,
+          curso: etiquetaCurso(curso),
+          grado: claveGrado(curso),
+          division: claveDivision(curso),
+        };
+      })
+      .sort((uno, otro) => sentido * this.comparar(uno, otro, columna));
   });
 
   protected readonly descripcionBusqueda = computed(() => {
@@ -286,6 +314,44 @@ export class ListadoCursoPageComponent {
     } finally {
       this.descargando.set(false);
     }
+  }
+
+  /** Un clic en la misma columna invierte el sentido; en otra, ordena ascendente. */
+  protected ordenarPor(columna: ColumnaOrden): void {
+    if (this.ordenColumna() === columna) {
+      this.ordenAscendente.update((asc) => !asc);
+      return;
+    }
+
+    this.ordenColumna.set(columna);
+    this.ordenAscendente.set(true);
+  }
+
+  /** Valor de `aria-sort` que anuncian los lectores de pantalla. */
+  protected estadoOrden(columna: ColumnaOrden): 'ascending' | 'descending' | 'none' {
+    if (this.ordenColumna() !== columna) return 'none';
+    return this.ordenAscendente() ? 'ascending' : 'descending';
+  }
+
+  protected iconoOrden(columna: ColumnaOrden): string {
+    if (this.ordenColumna() !== columna) return '';
+    return this.ordenAscendente() ? '▲' : '▼';
+  }
+
+  /**
+   * El curso se ordena por numero de grado y despues por letra, no como texto:
+   * alfabeticamente `10A` caeria antes que `6A`.
+   */
+  private comparar(uno: FilaResultado, otro: FilaResultado, columna: ColumnaOrden): number {
+    if (columna === 'alumno') {
+      return uno.alumno.localeCompare(otro.alumno, 'es');
+    }
+
+    return (
+      compararGrados(uno.grado, otro.grado) ||
+      compararDivisiones(uno.division, otro.division) ||
+      uno.alumno.localeCompare(otro.alumno, 'es')
+    );
   }
 
   protected abrirEdicion(idPedido: string): void {
