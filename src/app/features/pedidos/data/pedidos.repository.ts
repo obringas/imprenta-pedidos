@@ -7,10 +7,17 @@ import { ActualizarPedidoInput, CrearPedidoInput, Pedido } from '../domain/pedid
 
 const STORAGE_KEY = 'imprenta-pedidos';
 
+export type CrearPedidoConLibro = CrearPedidoInput & {
+  readonly libroTitulo: string;
+  readonly libroHojas: number;
+};
+
 export interface PedidosRepository {
   findAll(): Promise<Pedido[]>;
   findById(id: string): Promise<Pedido | null>;
   create(input: CrearPedidoInput & { readonly libroTitulo: string; readonly libroHojas: number }): Promise<Pedido>;
+  /** Alta en lote: una sola escritura para todo el curso. */
+  createMany(inputs: readonly CrearPedidoConLibro[]): Promise<Pedido[]>;
   update(id: string, input: ActualizarPedidoInput & { readonly libroTitulo: string; readonly libroHojas: number }): Promise<Pedido>;
   delete(id: string): Promise<void>;
 }
@@ -44,6 +51,25 @@ export class LocalPedidosRepository implements PedidosRepository {
     const pedidos = [pedido, ...this.leer()];
     this.guardar(pedidos);
     return pedido;
+  }
+
+  async createMany(inputs: readonly CrearPedidoConLibro[]): Promise<Pedido[]> {
+    const ahora = new Date().toISOString();
+    const nuevos: Pedido[] = inputs.map((input) => ({
+      id: crypto.randomUUID(),
+      estadoImpresion: 'Pendiente' as const,
+      fechaImpresion: null,
+      estadoEntrega: 'Pendiente' as const,
+      fechaEntrega: null,
+      ...input,
+      alumno: input.alumno.trim(),
+      fechaPago: input.montoCobrado > 0 ? ahora.slice(0, 10) : null,
+      creadoEn: ahora,
+      actualizadoEn: ahora,
+    }));
+
+    this.guardar([...nuevos, ...this.leer()]);
+    return nuevos;
   }
 
   async update(id: string, input: ActualizarPedidoInput & { readonly libroTitulo: string; readonly libroHojas: number }): Promise<Pedido> {
@@ -155,6 +181,38 @@ export class SupabasePedidosRepository implements PedidosRepository {
     }
 
     return creado;
+  }
+
+  /**
+   * Un solo insert con todas las filas. Postgres lo resuelve como una
+   * transaccion: o entran todos los pedidos del curso o no entra ninguno.
+   */
+  async createMany(inputs: readonly CrearPedidoConLibro[]): Promise<Pedido[]> {
+    if (!inputs.length) {
+      return [];
+    }
+
+    const client = this.requireClient();
+    const hoy = new Date().toISOString().slice(0, 10);
+    const payload = inputs.map((input) => ({
+      libro_id: input.libroId,
+      alumno: input.alumno.trim(),
+      division: input.division,
+      precio_cobrado: input.precioCobrado,
+      estado_pago: input.estadoPago,
+      monto_cobrado: input.montoCobrado,
+      fecha_pago: input.montoCobrado > 0 ? hoy : null,
+      observaciones: input.observaciones,
+    }));
+
+    const { data, error } = await client.from('pedidos').insert(payload as never).select('id');
+    if (error) {
+      throw AppError.inesperado(error);
+    }
+
+    const ids = ((data ?? []) as { id: string }[]).map((fila) => fila.id);
+    const todos = await this.findAll();
+    return todos.filter((pedido) => ids.includes(pedido.id));
   }
 
   async update(id: string, input: ActualizarPedidoInput & { readonly libroTitulo: string; readonly libroHojas: number }): Promise<Pedido> {

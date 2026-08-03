@@ -1,5 +1,46 @@
 # 07-changelog.md - Memoria de cambios
 
+## [2026-08-02] - Agente: Claude
+
+### Cambios
+- Nueva pantalla `/pedidos/carga-masiva`: se elige libro activo y division, se pega la lista de WhatsApp y se crean todos los pedidos juntos.
+- El parser limpia numeracion en cualquier formato, emojis, espacios dobles y caracteres invisibles.
+- Una nota entre parentesis al final de la linea se guarda como observacion del pedido.
+- Paso de previsualizacion: cada alumno se marca `Nuevo`, `Repetido` (aparece dos veces en la lista) o `Ya existe` (ya cargado para ese libro y division). Los dos ultimos vienen destildados y se pueden incluir a mano.
+- Alta en lote con una sola escritura, en vez de una por alumno.
+- Boton `Carga masiva` en el encabezado de Pedidos.
+
+### Motivo
+Los cursos se venian cargando con scripts SQL escritos a mano, uno por curso. Cada lista de WhatsApp traia numeracion irregular, emojis y caracteres invisibles que habia que limpiar manualmente antes de armar el insert.
+
+### Archivos afectados
+- `src/app/features/carga-masiva/domain/parsear-lista.util.ts`
+- `src/app/features/carga-masiva/domain/parsear-lista.util.spec.ts`
+- `src/app/features/carga-masiva/ui/pages/carga-masiva.page.ts`
+- `src/app/features/carga-masiva/carga-masiva.routes.ts`
+- `src/app/features/pedidos/pedidos.routes.ts`
+- `src/app/features/pedidos/data/pedidos.repository.ts`
+- `src/app/features/pedidos/state/pedidos.facade.ts`
+- `src/app/features/pedidos/ui/pages/pedidos-lista.page.ts`
+- `src/styles.css`
+
+### Decisiones tomadas
+El parser se aisla en un util con tests propios, construidos con las lineas reales que fueron apareciendo en las listas: `1-Oli P`, `1Leonella` sin separador, `10_Marcos`, `32. Mileka  Levy Cein  (A4)` y nombres con word joiner pegado adelante. Un invisible que sobreviva es especialmente danino porque el nombre se ve bien pero no matchea en ninguna busqueda.
+
+Los caracteres invisibles y pictogramas se declaran con escapes Unicode y no como literales, para que se lea que hace cada regex y no dependa del encoding del archivo.
+
+`createMany` hace un solo insert con todas las filas. Postgres lo resuelve como transaccion: o entra el curso completo o no entra ninguno.
+
+La previsualizacion es obligatoria: no se escribe nada hasta confirmar. Como `pedidos` no tiene unique constraint sobre `(libro_id, alumno)`, esta deteccion es la unica defensa real contra cargar dos veces el mismo curso.
+
+La pantalla cuelga de `/pedidos` y no del menu principal. La barra inferior ya tiene 5 items y en 375px un sexto obligaria a recortar los rotulos.
+
+### Validaciones realizadas
+- `npm run build` y `npm test` (37 de 37, con 12 casos nuevos del parser).
+- Validacion manual en viewport 375x812 pegando una lista real con emojis, numeracion mezclada, un word joiner, un nombre repetido en otra capitalizacion y una linea basura: se reconocieron 10 alumnos, se descarto `---`, se marcaron 1 `Ya existe` y 1 `Repetido`, y se crearon los 8 restantes.
+- Verificado tras la carga: division normalizada a mayusculas (`6b` quedo `6B`), precio tomado del libro, estado Pendiente, observacion `A4` preservada y cero caracteres invisibles en los nombres.
+- Reejecutar la misma carga marca todo como `Ya existe` y deja el boton deshabilitado en `Crear 0 pedidos`.
+
 ## [2026-08-01] - Agente: Claude
 
 ### Cambios

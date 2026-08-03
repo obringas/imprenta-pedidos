@@ -21,7 +21,10 @@ import { PedidosFacade } from '../../state/pedidos.facade';
         <h1>Pedidos</h1>
         <p class="page-description">Listado priorizado por estado general para resolver primero lo urgente.</p>
       </div>
-      <a routerLink="/pedidos/nuevo" class="primary-button desktop-only-inline">Nuevo pedido</a>
+      <div class="header-acciones">
+        <a routerLink="/pedidos/carga-masiva" class="secondary-button">Carga masiva</a>
+        <a routerLink="/pedidos/nuevo" class="primary-button desktop-only-inline">Nuevo pedido</a>
+      </div>
     </section>
 
     <section class="kpi-grid">
