@@ -45,11 +45,16 @@ export interface ActualizarPedidoInput extends CrearPedidoInput {
   readonly fechaPago?: string | null | undefined;
 }
 
+/** Valor del filtro de division que agrupa los pedidos que no la tienen cargada. */
+export const DIVISION_SIN_ASIGNAR = '__sin_division__';
+
 export interface FiltroPedidos {
   readonly busqueda: string;
   readonly libroId: string | null;
   readonly estadoGeneral: EstadoGeneral | null;
   readonly estadoPago: EstadoPago | null;
+  /** Valor crudo de `division`, o `DIVISION_SIN_ASIGNAR` para los que no tienen. */
+  readonly division: string | null;
   /** Por defecto false: la operacion diaria solo mira libros activos. */
   readonly incluirInactivos: boolean;
 }

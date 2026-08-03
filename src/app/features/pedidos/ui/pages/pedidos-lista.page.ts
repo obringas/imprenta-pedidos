@@ -6,7 +6,7 @@ import { ESTADO_GENERAL, ESTADO_PAGO, EstadoGeneral, EstadoPago } from '../../..
 import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { LibrosFacade } from '../../../libros/state/libros.facade';
-import { PedidoDetalle } from '../../domain/pedido.model';
+import { DIVISION_SIN_ASIGNAR, PedidoDetalle } from '../../domain/pedido.model';
 import { PedidosFacade } from '../../state/pedidos.facade';
 
 @Component({
@@ -70,6 +70,16 @@ import { PedidosFacade } from '../../state/pedidos.facade';
             <option value="">Todos</option>
             @for (libro of librosFacade.activos(); track libro.id) {
               <option [value]="libro.id">{{ libro.titulo }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>División</span>
+          <select [value]="facade.filtros().division ?? ''" (change)="actualizarDivision($any($event.target).value)">
+            <option value="">Todas</option>
+            @for (division of facade.divisionesDisponibles(); track division) {
+              <option [value]="division">{{ etiquetaDivision(division) }}</option>
             }
           </select>
         </label>
@@ -143,6 +153,16 @@ import { PedidosFacade } from '../../state/pedidos.facade';
                 <option value="">Todos</option>
                 @for (libro of librosFacade.activos(); track libro.id) {
                   <option [value]="libro.id">{{ libro.titulo }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>División</span>
+              <select [value]="facade.filtros().division ?? ''" (change)="actualizarDivision($any($event.target).value)">
+                <option value="">Todas</option>
+                @for (division of facade.divisionesDisponibles(); track division) {
+                  <option [value]="division">{{ etiquetaDivision(division) }}</option>
                 }
               </select>
             </label>
@@ -329,6 +349,12 @@ export class PedidosListaPageComponent {
             clear: () => this.actualizarLibro(''),
           }
         : null,
+      filtros.division
+        ? {
+            label: `División: ${this.etiquetaDivision(filtros.division)}`,
+            clear: () => this.actualizarDivision(''),
+          }
+        : null,
       filtros.estadoGeneral
         ? {
             label: `General: ${filtros.estadoGeneral}`,
@@ -371,6 +397,15 @@ export class PedidosListaPageComponent {
 
   protected actualizarIncluirInactivos(valor: boolean): void {
     this.facade.actualizarFiltros({ incluirInactivos: valor });
+  }
+
+  protected actualizarDivision(valor: string): void {
+    this.facade.actualizarFiltros({ division: valor || null });
+  }
+
+  /** Los pedidos sin division cargada se muestran con un rotulo entendible. */
+  protected etiquetaDivision(division: string): string {
+    return division === DIVISION_SIN_ASIGNAR ? 'Sin división' : division;
   }
 
   protected toggleEstadoGeneral(estado: EstadoGeneral): void {

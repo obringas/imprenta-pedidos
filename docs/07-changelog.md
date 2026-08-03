@@ -1,5 +1,41 @@
 # 07-changelog.md - Memoria de cambios
 
+## [2026-08-01] - Agente: Claude
+
+### Cambios
+- La pantalla de Pedidos suma un filtro por division, disponible en el panel de escritorio y en el de celular.
+- El desplegable se arma con las divisiones que existen en los pedidos visibles y se ordena como curso, no alfabeticamente.
+- Los pedidos sin division cargada se agrupan bajo la opcion `Sin división`.
+- El filtro tiene su chip removible, como el resto.
+- `curso.util.ts` se movio de `features/listados/domain/` a `shared/utils/`.
+
+### Motivo
+Con varios cursos cargados sobre el mismo libro, filtrar solo por libro devolvia demasiados pedidos.
+
+### Archivos afectados
+- `src/app/features/pedidos/domain/pedido.model.ts`
+- `src/app/features/pedidos/state/pedidos.store.ts`
+- `src/app/features/pedidos/state/pedidos.store.spec.ts`
+- `src/app/features/pedidos/state/pedidos.facade.ts`
+- `src/app/features/pedidos/ui/pages/pedidos-lista.page.ts`
+- `src/app/shared/utils/curso.util.ts` (movido)
+- `src/app/shared/utils/curso.util.spec.ts` (movido)
+- `src/app/features/listados/ui/pages/listado-curso.page.ts`
+- `src/app/features/listados/ui/components/editar-alumno-dialog.component.ts`
+
+### Decisiones tomadas
+El filtro compara contra el valor crudo de `pedidos.division` en vez de contra grado y division por separado. En esta pantalla alcanza con elegir el curso completo, y evita que un pedido heredado quede fuera del filtro por no poder parsearse.
+
+`curso.util.ts` paso a `shared/utils/`: lo necesitan dos features y la alternativa era que Pedidos importara desde Listados o que se duplicara el criterio de orden.
+
+Los pedidos sin division usan el centinela `DIVISION_SIN_ASIGNAR` para distinguir "no filtrar" de "filtrar los que no tienen division".
+
+Los KPI de la pantalla siguen resumiendo todos los pedidos visibles y no el subconjunto filtrado. Es el comportamiento que ya tenian con los filtros de libro y estado; no se cambio para no alterar una pantalla en uso sin pedirlo.
+
+### Validaciones realizadas
+- `npm run build` y `npm test` (25 de 25, con 4 casos nuevos del filtro).
+- Validacion manual en viewport 375x812: el desplegable ofrece `3A, 6A, 6B, 10A, Sin división` en ese orden, con `10A` despues de `6B`. Filtrar por `6A` deja los dos pedidos correctos, `Sin división` aisla el pedido sin curso, el chip limpia el filtro y se combina con la busqueda por alumno.
+
 ## [2026-07-31] - Agente: Claude
 
 ### Cambios

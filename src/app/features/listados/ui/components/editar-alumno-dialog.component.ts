@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
 import { PedidoDetalle } from '../../../pedidos/domain/pedido.model';
-import { etiquetaCurso, parsearCurso } from '../../domain/curso.util';
+import { etiquetaCurso, parsearCurso } from '../../../../shared/utils/curso.util';
 
 export interface CorreccionAlumno {
   readonly alumno: string;

@@ -13,7 +13,7 @@ import {
   compararGrados,
   etiquetaCurso,
   parsearCurso,
-} from '../../domain/curso.util';
+} from '../../../../shared/utils/curso.util';
 // compararGrados y compararDivisiones ya se usaban para poblar los selectores;
 // aca se reutilizan para ordenar la tabla con el mismo criterio.
 

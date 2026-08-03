@@ -20,6 +20,7 @@ export class PedidosFacade {
   readonly pedidosFiltrados = this.store.pedidosFiltrados;
   readonly estadisticas = this.store.estadisticas;
   readonly ocultosPorLibroInactivo = this.store.ocultosPorLibroInactivo;
+  readonly divisionesDisponibles = this.store.divisionesDisponibles;
 
   /**
    * Pedidos del catalogo vigente. A diferencia de `pedidosVisibles` del store,
@@ -56,6 +57,7 @@ export class PedidosFacade {
       libroId: null,
       estadoGeneral: null,
       estadoPago: null,
+      division: null,
       incluirInactivos: false,
     });
   }
