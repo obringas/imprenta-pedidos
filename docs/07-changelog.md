@@ -1,5 +1,31 @@
 # 07-changelog.md - Memoria de cambios
 
+## [2026-08-03] - Agente: Claude
+
+### Cambios
+- La columna `Grado - División` del Excel y de la tabla del listado ahora dice `7 Grado A` en lugar de `7A`.
+- Un curso con grado pero sin division pasa de `7 sin division` a `7 Grado`.
+
+### Motivo
+El Excel se imprime y se comparte con el colegio, donde `7A` se lee peor que el curso escrito en palabras.
+
+### Archivos afectados
+- `src/app/shared/utils/curso.util.ts`
+- `src/app/shared/utils/curso.util.spec.ts`
+
+### Decisiones tomadas
+Se cambio `etiquetaCurso`, que es la unica fuente de ese texto, en vez de formatear aparte en la exportacion. Asi la pantalla y el archivo no pueden quedar diciendo cosas distintas.
+
+El cambio alcanza tambien a la vista previa `Se va a leer como:` del dialogo de correccion y de la carga masiva, que usan la misma funcion.
+
+No afecta el nombre del archivo descargado, que se arma con `grado + division` (`pedidos-workbook-7a.xlsx`), ni el orden de la tabla, que compara por grado y division y no por la etiqueta.
+
+Los cursos heredados sin grado siguen mostrandose como `Sin grado B`.
+
+### Validaciones realizadas
+- `npm run build` y `npm test` (38 de 38).
+- Se descomprimio el xlsx generado y se leyeron las celdas: `Ana Zabala | 7 Grado A`, `Bruno Diaz | 6 Grado B`, `Carla Ruiz | Sin grado B`, `Dario Paz | Sin grado`.
+
 ## [2026-08-02] - Agente: Claude
 
 ### Cambios

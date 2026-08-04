@@ -55,10 +55,16 @@ export function claveDivision(curso: Curso): string {
   return curso.division ?? SIN_DIVISION;
 }
 
-/** Etiqueta para mostrar y exportar: `6A`, `Sin grado B`, `Sin grado`. */
+/**
+ * Etiqueta legible del curso: `7 Grado A`, `7 Grado`, `Sin grado B`,
+ * `Sin grado`.
+ *
+ * Se escribe en palabras y no como `7A` porque este texto termina en el
+ * Excel que se imprime y se comparte con el colegio.
+ */
 export function etiquetaCurso(curso: Curso): string {
   if (curso.grado && curso.division) {
-    return `${curso.grado}${curso.division}`;
+    return `${curso.grado} Grado ${curso.division}`;
   }
 
   if (curso.division) {
@@ -66,7 +72,7 @@ export function etiquetaCurso(curso: Curso): string {
   }
 
   if (curso.grado) {
-    return `${curso.grado} ${SIN_DIVISION.toLowerCase()}`;
+    return `${curso.grado} Grado`;
   }
 
   return SIN_GRADO;

@@ -32,8 +32,13 @@ describe('parsearCurso', () => {
 });
 
 describe('etiquetaCurso', () => {
-  it('debería juntar grado y división sin separador', () => {
-    expect(etiquetaCurso({ grado: '6', division: 'A' })).toBe('6A');
+  it('debería escribir el curso en palabras para que se lea en el Excel', () => {
+    expect(etiquetaCurso({ grado: '6', division: 'A' })).toBe('6 Grado A');
+    expect(etiquetaCurso({ grado: '7', division: 'B' })).toBe('7 Grado B');
+  });
+
+  it('debería resolver el caso de grado sin división', () => {
+    expect(etiquetaCurso({ grado: '3', division: null })).toBe('3 Grado');
   });
 
   it('debería avisar cuando falta el grado', () => {
