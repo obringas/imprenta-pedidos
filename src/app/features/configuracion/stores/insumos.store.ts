@@ -1,5 +1,10 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { ConfiguracionInsumo, CostosUnitariosInsumos } from '../../../shared/models/configuracion-insumos.model';
+import {
+  aplicarValorInsumo,
+  ConfiguracionInsumo,
+  CostosUnitariosInsumos,
+  ValorInsumo,
+} from '../../../shared/models/configuracion-insumos.model';
 import { derivarCostosUnitarios } from '../../../shared/utils/calcular-precio-sugerido.util';
 import { INSUMOS_REPOSITORY } from '../repositories/insumos.repository.token';
 
@@ -29,16 +34,14 @@ export class InsumosStore {
     }
   }
 
-  async actualizarInsumo(id: string, valor: number): Promise<void> {
+  async actualizarInsumo(id: string, valor: ValorInsumo): Promise<void> {
     this.cargando.set(true);
     this.error.set(null);
 
     try {
       await this.repo.actualizar(id, valor);
       this.insumos.update((insumos) =>
-        insumos.map((insumo) =>
-          insumo.id === id ? { ...insumo, valor, updatedAt: new Date().toISOString() } : insumo,
-        ),
+        insumos.map((insumo) => (insumo.id === id ? aplicarValorInsumo(insumo, valor) : insumo)),
       );
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'No se pudo actualizar el insumo.');

@@ -1,7 +1,10 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
+import { z } from 'zod';
 import { calcularHojas } from '../../../shared/constants/negocio.constants';
+import { AppError } from '../../../shared/errors/app-error';
 import { LIBROS_REPOSITORY } from '../data/libros.repository.token';
-import { ActualizarLibroInput, CrearLibroInput, Libro } from '../domain/libro.model';
+import { aActualizarLibroInput, ActualizarLibroInput, CrearLibroInput, Libro } from '../domain/libro.model';
+import { actualizarLibroSchema, crearLibroSchema } from '../domain/libro.validator';
 
 @Injectable({ providedIn: 'root' })
 export class LibrosFacade {
@@ -23,14 +26,27 @@ export class LibrosFacade {
     this.cargandoInterno.set(false);
   }
 
-  async guardar(input: CrearLibroInput | ActualizarLibroInput, id?: string): Promise<void> {
-    if (id) {
-      await this.repository.update(id, input as ActualizarLibroInput);
-    } else {
-      await this.repository.create(input as CrearLibroInput);
-    }
+  /**
+   * Valida con Zod y persiste. Devuelve el libro guardado para que quien llama
+   * pueda seguir trabajando con el (por ejemplo, tildarlo en el cotizador).
+   * Lanza `AppError` de validacion si el input no cumple las reglas.
+   */
+  async guardar(input: CrearLibroInput | ActualizarLibroInput, id?: string): Promise<Libro> {
+    const guardado = id
+      ? await this.repository.update(id, this.validar(actualizarLibroSchema, input))
+      : await this.repository.create(this.validar(crearLibroSchema, input));
 
     await this.cargar();
+    return guardado;
+  }
+
+  private validar<T>(schema: z.ZodType<T>, input: unknown): T {
+    const parsed = schema.safeParse(input);
+    if (!parsed.success) {
+      throw AppError.validacion('libro', parsed.error.issues[0]?.message ?? 'Dato inválido');
+    }
+
+    return parsed.data;
   }
 
   obtenerPorId(id: string): Libro | null {
@@ -56,12 +72,7 @@ export class LibrosFacade {
 
     try {
       const actualizado = await this.repository.update(id, {
-        titulo: libro.titulo,
-        precioA4: libro.precioA4,
-        precioA5: libro.precioA5,
-        paginas: libro.paginas,
-        observaciones: libro.observaciones,
-        margenGanancia: libro.margenGanancia,
+        ...aActualizarLibroInput(libro),
         activo: estadoDeseado,
       });
 

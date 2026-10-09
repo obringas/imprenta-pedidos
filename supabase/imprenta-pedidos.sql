@@ -30,11 +30,17 @@ create table if not exists public.libros (
   paginas       integer not null check (paginas > 0),
   hojas         integer generated always as (ceil(paginas::numeric / 2)) stored,
   observaciones text null,
-  margen_ganancia numeric(5, 2) not null default 156
+  -- margen con el que se aplicaron los precios de este libro (% sobre costo).
+  margen_ganancia numeric(5, 2) not null default 150
     check (margen_ganancia >= 0 and margen_ganancia <= 500),
+  tipo_impresion text not null default 'poco_color'
+    check (tipo_impresion in ('bn', 'poco_color', 'color_pleno', 'mixto')),
+  -- solo para tipo 'mixto': paginas a color pleno; el resto va en B/N.
+  paginas_color integer not null default 0 check (paginas_color >= 0),
   activo        boolean not null default true,
   created_at    timestamptz not null default timezone('utc', now()),
-  updated_at    timestamptz not null default timezone('utc', now())
+  updated_at    timestamptz not null default timezone('utc', now()),
+  constraint libros_paginas_color_max_check check (paginas_color <= paginas)
 );
 
 create table if not exists public.pedidos (

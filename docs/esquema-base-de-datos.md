@@ -57,7 +57,9 @@ Agregado el `2026-10-08` (`supabase/migracion_tamanio_a4_a5.sql`).
 | `paginas` | `integer` | no | `check (paginas > 0)` |
 | `hojas` | `integer` | no | generada: `ceil(paginas / 2)` |
 | `observaciones` | `text` | si | |
-| `margen_ganancia` | `numeric(5,2)` | no | `156`, rango `0..500` |
+| `margen_ganancia` | `numeric(5,2)` | no | `150` (antes `156`), rango `0..500`. Margen con el que se aplicaron los precios de ese libro |
+| `tipo_impresion` | `text` | no | `'poco_color'`, `check in ('bn','poco_color','color_pleno','mixto')` |
+| `paginas_color` | `integer` | no | `0`, `check (paginas_color >= 0)`; solo cuenta en `mixto` |
 | `activo` | `boolean` | no | `true` |
 | `created_at` | `timestamptz` | no | `timezone('utc', now())` |
 | `updated_at` | `timestamptz` | no | `timezone('utc', now())` |
@@ -66,6 +68,8 @@ Restricciones y notas:
 
 - PK: `libros_pkey (id)`
 - `hojas` no se persiste desde frontend; la calcula la base.
+- `libros_paginas_color_max_check`: `paginas_color <= paginas`.
+- `tipo_impresion`, `paginas_color` y el default 150 los agrega `supabase/migracion_cotizador.sql`.
 - La app tiene fallback legacy si la columna `margen_ganancia` no existe, pero el esquema vigente la da por obligatoria.
 
 Indices:
@@ -117,26 +121,25 @@ Indices:
 | `id` | `uuid` | no | `gen_random_uuid()` |
 | `clave` | `text` | no | `unique` |
 | `descripcion` | `text` | no | |
-| `valor` | `numeric(12,2)` | no | `check (valor >= 0)` |
-| `unidad` | `text` | no | |
+| `valor` | `numeric(12,2)` | no | `check (valor >= 0)`; `0` en los insumos de texto |
+| `valor_texto` | `text` | si | solo insumos de texto (`whatsapp_contacto`, `whatsapp_firma`) |
+| `unidad` | `text` | no | puede incluir `{clave}`: la app lo reemplaza por el valor actual de ese insumo |
 | `updated_at` | `timestamptz` | no | `timezone('utc', now())` |
 
-Claves usadas por el sistema:
+Claves usadas por el sistema (el tipo por clave vive en `REGLAS_INSUMO`, `src/app/shared/models/configuracion-insumos.model.ts`):
 
-- `tapa_paquete`
-- `tapa_cantidad`
-- `espiral_paquete`
-- `espiral_cantidad`
-- `hojas_resma`
-- `hojas_cantidad`
-- `toner_costo`
-- `toner_impresiones`
+- Papel: `hojas_resma`, `hojas_cantidad`
+- Espiral y tapa: `espiral_paquete`, `espiral_cantidad`, `espiral_max_hojas`, `tapa_paquete`, `tapa_a5_paquete`, `tapa_cantidad`
+- Toner: `toner_negro_costo`, `toner_negro_rinde`, `toner_color_costo`, `toner_color_rinde`, `toner_factor_rendimiento`
+- Cobertura de pagina: `cobertura_bn_negro`, `cobertura_poco_negro`, `cobertura_poco_color`, `cobertura_pleno_negro`, `cobertura_pleno_color`
+- Precio: `margen_default`, `margen_minimo`, `precio_redondeo`, `descuento_cantidad_pct`, `descuento_cantidad_minima`
+- Mensaje (texto): `whatsapp_contacto`, `whatsapp_firma`
+- Deprecadas: `toner_costo`, `toner_impresiones`. Siguen en la tabla, la app las oculta y no las usa (ver `docs/08-known-issues.md`).
 
 Notas:
 
-- Se guardan valores de compra y cantidades bulk; los costos unitarios se derivan en frontend.
-- `toner_costo` representa el cartucho individual.
-- El costo del juego completo se calcula en frontend como `toner_costo * 4`.
+- Se guardan valores de compra y cantidades bulk; los costos unitarios se derivan en frontend (`derivarCostosUnitarios`, ver "Modelo de costos" en `docs/01-context.md`).
+- Las claves nuevas las inserta `supabase/migracion_cotizador.sql` con `on conflict do nothing`. Si falta alguna, la migracion hace rollback.
 
 ## Funciones y triggers
 
@@ -254,17 +257,7 @@ Nota:
 
 ## Seed inicial de `configuracion_insumos`
 
-```sql
-insert into public.configuracion_insumos (clave, descripcion, valor, unidad) values
-  ('tapa_paquete', 'Tapas A4 (paquete)', 6500, 'ARS x 50 unidades'),
-  ('tapa_cantidad', 'Tapas por paquete', 50, 'unidades'),
-  ('espiral_paquete', 'Espirales (paquete)', 4895, 'ARS x 50 unidades'),
-  ('espiral_cantidad', 'Espirales por paquete', 50, 'unidades'),
-  ('hojas_resma', 'Hojas A4 (10 resmas)', 49720, 'ARS x 10 resmas'),
-  ('hojas_cantidad', 'Hojas por resma', 500, 'hojas por resma'),
-  ('toner_costo', 'Toner individual', 160000, 'ARS x cartucho'),
-  ('toner_impresiones', 'Impresiones por juego de toner', 22000, 'caras impresas');
-```
+El seed completo (27 claves, con los valores vigentes al 2026-10-09) esta en `supabase/configuracion-insumos.sql`. Para una base existente, usar `supabase/migracion_cotizador.sql`, que no pisa valores.
 
 ## Reglas funcionales asociadas
 
@@ -272,7 +265,7 @@ Derivaciones implementadas en frontend:
 
 ```ts
 hojas = Math.ceil(paginas / 2)
-tonerPorCara = (toner_costo * 4) / toner_impresiones
+// costos por cara, precio y margen: ver "Modelo de costos" en docs/01-context.md
 ```
 
 El precio sugerido no se persiste en base de datos.

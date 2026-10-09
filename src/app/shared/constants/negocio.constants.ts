@@ -36,6 +36,38 @@ export function esTamanioImpresion(valor: string): valor is TamanioImpresion {
   return (TAMANIOS_IMPRESION as readonly string[]).includes(valor);
 }
 
+/** Cuanta tinta lleva cada pagina del libro; define el costo de toner por cara. */
+export const TIPO_IMPRESION = {
+  BN: 'bn',
+  POCO_COLOR: 'poco_color',
+  COLOR_PLENO: 'color_pleno',
+  /** B/N con algunas paginas a color pleno (`paginasColor`). */
+  MIXTO: 'mixto',
+} as const;
+
+export type TipoImpresion = (typeof TIPO_IMPRESION)[keyof typeof TIPO_IMPRESION];
+
+export const TIPOS_IMPRESION: readonly TipoImpresion[] = [
+  TIPO_IMPRESION.BN,
+  TIPO_IMPRESION.POCO_COLOR,
+  TIPO_IMPRESION.COLOR_PLENO,
+  TIPO_IMPRESION.MIXTO,
+];
+
+export const ETIQUETA_TIPO_IMPRESION: Record<TipoImpresion, string> = {
+  [TIPO_IMPRESION.BN]: 'Blanco y negro',
+  [TIPO_IMPRESION.POCO_COLOR]: 'Texto con poco color',
+  [TIPO_IMPRESION.COLOR_PLENO]: 'Color pleno',
+  [TIPO_IMPRESION.MIXTO]: 'B/N con páginas a color',
+};
+
+/** Los libros nuevos y los existentes antes del cotizador quedan con este tipo. */
+export const TIPO_IMPRESION_POR_DEFECTO: TipoImpresion = TIPO_IMPRESION.POCO_COLOR;
+
+export function esTipoImpresion(valor: string): valor is TipoImpresion {
+  return (TIPOS_IMPRESION as readonly string[]).includes(valor);
+}
+
 export const ESTADO_GENERAL = {
   PENDIENTE: 'Pendiente',
   IMPRESO_CON_SALDO: 'Impreso con saldo',

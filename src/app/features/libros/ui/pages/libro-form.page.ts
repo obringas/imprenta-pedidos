@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { startWith } from 'rxjs';
+import { TIPO_IMPRESION_POR_DEFECTO, TipoImpresion } from '../../../../shared/constants/negocio.constants';
 import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { calcularPrecioSugerido } from '../../../../shared/utils/calcular-precio-sugerido.util';
@@ -130,6 +131,8 @@ export class LibroFormPageComponent {
     precioA5: [0, [Validators.required, Validators.min(1)]],
     paginas: [2, [Validators.required, Validators.min(2)]],
     margenGanancia: [156, [Validators.required, Validators.min(0), Validators.max(500)]],
+    tipoImpresion: [TIPO_IMPRESION_POR_DEFECTO as TipoImpresion],
+    paginasColor: [0, [Validators.min(0)]],
     observaciones: [''],
     activo: [true],
   });
@@ -185,6 +188,8 @@ export class LibroFormPageComponent {
         precioA5: libro.precioA5,
         paginas: libro.paginas,
         margenGanancia: libro.margenGanancia,
+        tipoImpresion: libro.tipoImpresion,
+        paginasColor: libro.paginasColor,
         observaciones: libro.observaciones ?? '',
         activo: libro.activo,
       });
