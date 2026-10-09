@@ -34,7 +34,11 @@ src/app/
     informes/
       state/
       ui/
-    configuracion/
+    cotizador/          # modelo de costos (domain/), facade (state/) y pantalla /cotizador (ui/)
+      domain/
+      state/
+      ui/
+    configuracion/      # /configuracion/insumos: domain/, pages/, repositories/, stores/ (InsumosStore)
   shared/
     components/
     constants/
@@ -57,6 +61,7 @@ src/app/
 Fuente de verdad funcional:
 
 - Tablas: `libros`, `pedidos`, `configuracion_insumos`.
+- `configuracion_insumos` es la unica fuente de costos, margenes y datos del mensaje del cotizador (ADR-0004).
 - Vistas: `pedidos_detalle`, `informes_resumen`, `informes_resumen_por_libro`.
 - Enums: `estado_pago`, `estado_impresion`, `estado_entrega`, `tamanio_impresion`.
 - RLS habilitado para tablas persistentes.

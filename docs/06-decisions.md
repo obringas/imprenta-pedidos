@@ -42,7 +42,7 @@ Los libros se imprimen en A4 y en A5, con precios distintos. El sistema tenia un
 - `pedidos.tamanio` es `not null` y sin default: cada alta declara su tamaño. La migracion deja todos los pedidos existentes en A5. Los A4 de los libros de la cotizacion 2026-10 los detecta ese script (ver ADR-0003). El resto se corrige a mano.
 - El precio del pedido se sigue copiando al crearlo (`precio_cobrado`). Cambiar el tamaño de un pedido existente trae el precio vigente del libro para ese tamaño, porque es una accion explicita. El precio sigue siendo editable.
 - `TAMANIO_POR_DEFECTO = A5` en la app: es el tamaño de la mayoria de los pedidos. El A4 llegaba marcado como excepcion en las listas.
-- El calculo de precio sugerido sigue usando insumos A4 y solo completa el precio A4.
+- El calculo de precio sugerido sigue usando insumos A4 y solo completa el precio A4. (Reemplazado por ADR-0004: el modelo de costos calcula A4 y A5.)
 
 ### Consecuencias
 - Positivo: el tamaño queda como dato estructurado, filtrable en Pedidos, Informes y Listados, y el precio se resuelve solo segun el tamaño.
@@ -73,3 +73,32 @@ La cotizacion de 2026-10 trae cuatro precios por libro: A4 y A5, cada uno para m
 - Positivo: un solo precio por tamaño, simple de leer y de cargar desde el celular.
 - Negativo: los cursos chicos pagan el mismo precio que los grandes. Si hace falta diferenciar, se ajusta el precio a mano en el pedido.
 - Si en el futuro se retoma una escala, conviene definirla por cotizacion y no como cuatro precios en la ficha del libro.
+
+## ADR-0004 - Cotizador con modelo de costos configurable
+
+### Fecha
+2026-10-09
+
+### Estado
+Aceptada
+
+### Contexto
+El precio sugerido solo calculaba A4, con un toner unico que trataba toda pagina como color pleno y usaba el precio del color para el negro (ver `08-known-issues.md`). La usuaria negocia precios por curso y necesita ver costo, ganancia y margen de cada libro en A4 y A5, bajar el margen de un solo libro y mandar el presupuesto por WhatsApp.
+
+### Decision
+- Unica fuente de costos, margenes y datos del mensaje: `configuracion_insumos`, via `InsumosStore`. No hay costos ni margenes en el codigo; si falta una clave queda en 0 y se avisa en pantalla.
+- Modelo de costos en funciones puras (`features/cotizador/domain/`): toner negro y color por separado con rendimiento al 5 %, cobertura por tipo de pagina (`bn`, `poco_color`, `color_pleno`, `mixto`), A5 2-up sobre A4 cortada y tomos segun `espiral_max_hojas`.
+- Redondeo asimetrico: el precio hacia arriba (nunca queda debajo del margen elegido) y el precio por cantidad hacia abajo (el descuento nunca es menor al anunciado). Asi se cumplen a la vez $11.050 y $9.700 del ejemplo de 130 paginas; con un solo redondeo al multiplo mas cercano el precio daba $11.000.
+- Papel A5 = `ceil(paginas / 4)` hojas A4, por ejemplar. El ejemplo original estimaba el costo A5 en ≈ 2.272 (32,5 hojas); con la regla da 2.277,70. El precio no cambia.
+- El margen que se muestra es el del precio final, ya redondeado: es lo que realmente se gana.
+- Insumos de texto (`whatsapp_contacto`, `whatsapp_firma`) en una columna nueva `valor_texto`: `valor` es `numeric` con `check (valor >= 0)` y no admite texto. El tipo de cada clave (`numero`, `dinero`, `porcentaje`, `texto`) y sus limites viven en `REGLAS_INSUMO`.
+- `libros.margen_ganancia` pasa a ser el margen con el que se aplicaron los precios de ese libro. Con precio objetivo se guarda el margen que sale de ese precio (prioridad A4, despues A5), acotado a 0..500 por el check de la base.
+- `toner_costo` y `toner_impresiones` quedan deprecadas: siguen en la tabla, ocultas y sin uso.
+- El estado del cotizador vive en un facade `providedIn: 'root'` para sobrevivir a la ida y vuelta al formulario de libro nuevo. El libro creado vuelve por `?libro=` y queda tildado.
+
+### Consecuencias
+- Positivo: los precios se explican con numeros que la usuaria edita, y el margen se negocia sin tocar codigo.
+- Positivo: cambiar `margen_default` no toca libros ni pedidos.
+- Negativo: la app nueva necesita la migracion antes del despliegue (ver `08-known-issues.md`).
+- Pendiente: Informes todavia cuenta las hojas A5 como A4.
+
