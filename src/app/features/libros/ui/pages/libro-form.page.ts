@@ -32,13 +32,23 @@ import { LibrosFacade } from '../../state/libros.facade';
         }
       </label>
 
-      <label class="field">
-        <span>Precio</span>
-        <input type="number" formControlName="precio" [class.input-invalid]="mostrarError('precio')" />
-        @if (mostrarError('precio')) {
-          <small class="field-error">Ingresá un precio mayor que 0.</small>
-        }
-      </label>
+      <div class="form-row compact-row">
+        <label class="field">
+          <span>Precio A4</span>
+          <input type="number" inputmode="numeric" formControlName="precioA4" [class.input-invalid]="mostrarError('precioA4')" />
+          @if (mostrarError('precioA4')) {
+            <small class="field-error">Ingresá el precio A4, mayor que 0.</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Precio A5</span>
+          <input type="number" inputmode="numeric" formControlName="precioA5" [class.input-invalid]="mostrarError('precioA5')" />
+          @if (mostrarError('precioA5')) {
+            <small class="field-error">Ingresá el precio A5, mayor que 0.</small>
+          }
+        </label>
+      </div>
 
       <label class="field">
         <span>Páginas</span>
@@ -76,7 +86,7 @@ import { LibrosFacade } from '../../state/libros.facade';
         <p class="caption warning-text">Los pedidos existentes mantienen su precio original aunque cambies este valor.</p>
       </div>
 
-      @if (hojas() > 0 && form.controls.precio.value > 0) {
+      @if (hojas() > 0 && form.controls.precioA4.value > 0) {
         <div class="card suggested-price-card">
           <p class="eyebrow">Referencia de cobro</p>
           <strong>{{ precioPorPaginaSugerido() | peso }}</strong>
@@ -93,8 +103,8 @@ import { LibrosFacade } from '../../state/libros.facade';
         <div class="card suggested-price-card">
           <p class="eyebrow">Precio sugerido</p>
           <strong>{{ precioSugeridoRedondeado() | peso }}</strong>
-          <p class="caption">Costo base: {{ resultadoCosto().costoBase | peso }} · Hojas físicas: {{ resultadoCosto().hojas }}</p>
-          <button type="button" class="secondary-button" (click)="usarPrecioSugerido()">Usar precio sugerido</button>
+          <p class="caption">Costo base: {{ resultadoCosto().costoBase | peso }} · Hojas físicas: {{ resultadoCosto().hojas }} · Calculado con insumos A4.</p>
+          <button type="button" class="secondary-button" (click)="usarPrecioSugerido()">Usar como precio A4</button>
         </div>
       }
 
@@ -116,7 +126,8 @@ export class LibroFormPageComponent {
 
   protected readonly form = this.formBuilder.nonNullable.group({
     titulo: ['', [Validators.required, Validators.minLength(3)]],
-    precio: [0, [Validators.required, Validators.min(1)]],
+    precioA4: [0, [Validators.required, Validators.min(1)]],
+    precioA5: [0, [Validators.required, Validators.min(1)]],
     paginas: [2, [Validators.required, Validators.min(2)]],
     margenGanancia: [156, [Validators.required, Validators.min(0), Validators.max(500)]],
     observaciones: [''],
@@ -170,17 +181,22 @@ export class LibroFormPageComponent {
 
       this.form.patchValue({
         titulo: libro.titulo,
-        precio: libro.precio,
+        precioA4: libro.precioA4 ?? 0,
+        precioA5: libro.precioA5,
         paginas: libro.paginas,
         margenGanancia: libro.margenGanancia,
         observaciones: libro.observaciones ?? '',
         activo: libro.activo,
       });
+      // Libro anterior a A4/A5: se marca el campo para que se vea que falta.
+      if (libro.precioA4 === null) {
+        this.form.controls.precioA4.markAsTouched();
+      }
       this.libroCargado.set(true);
     });
   }
 
-  protected mostrarError(campo: 'titulo' | 'precio' | 'paginas' | 'margenGanancia'): boolean {
+  protected mostrarError(campo: 'titulo' | 'precioA4' | 'precioA5' | 'paginas' | 'margenGanancia'): boolean {
     const control = this.form.controls[campo];
     return control.invalid && (control.touched || control.dirty);
   }
@@ -194,9 +210,10 @@ export class LibroFormPageComponent {
     return 'El título debe tener al menos 3 caracteres.';
   }
 
+  /** Los insumos configurados son A4, por eso el sugerido solo aplica a ese precio. */
   protected usarPrecioSugerido(): void {
-    this.form.controls.precio.setValue(this.precioSugeridoRedondeado());
-    this.form.controls.precio.markAsDirty();
+    this.form.controls.precioA4.setValue(this.precioSugeridoRedondeado());
+    this.form.controls.precioA4.markAsDirty();
   }
 
   protected async guardar(): Promise<void> {

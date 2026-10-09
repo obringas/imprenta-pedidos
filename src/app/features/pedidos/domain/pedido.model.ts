@@ -1,4 +1,4 @@
-﻿import { EstadoEntrega, EstadoGeneral, EstadoImpresion, EstadoPago } from '../../../shared/constants/negocio.constants';
+﻿import { EstadoEntrega, EstadoGeneral, EstadoImpresion, EstadoPago, TamanioImpresion } from '../../../shared/constants/negocio.constants';
 
 export interface Pedido {
   readonly id: string;
@@ -7,6 +7,7 @@ export interface Pedido {
   readonly libroHojas: number;
   readonly alumno: string;
   readonly division: string | null;
+  readonly tamanio: TamanioImpresion;
   readonly precioCobrado: number;
   readonly estadoImpresion: EstadoImpresion;
   readonly fechaImpresion: string | null;
@@ -31,6 +32,7 @@ export interface CrearPedidoInput {
   readonly libroId: string;
   readonly alumno: string;
   readonly division: string | null;
+  readonly tamanio: TamanioImpresion;
   readonly precioCobrado: number;
   readonly estadoPago: EstadoPago;
   readonly montoCobrado: number;
@@ -55,6 +57,7 @@ export interface FiltroPedidos {
   readonly estadoPago: EstadoPago | null;
   /** Valor crudo de `division`, o `DIVISION_SIN_ASIGNAR` para los que no tienen. */
   readonly division: string | null;
+  readonly tamanio: TamanioImpresion | null;
   /** Por defecto false: la operacion diaria solo mira libros activos. */
   readonly incluirInactivos: boolean;
 }

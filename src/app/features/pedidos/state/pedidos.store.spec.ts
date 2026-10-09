@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ESTADO_ENTREGA, ESTADO_GENERAL, ESTADO_IMPRESION, ESTADO_PAGO } from '../../../shared/constants/negocio.constants';
+import { ESTADO_ENTREGA, ESTADO_GENERAL, ESTADO_IMPRESION, ESTADO_PAGO, TAMANIO_IMPRESION } from '../../../shared/constants/negocio.constants';
 import { DIVISION_SIN_ASIGNAR, PedidoDetalle } from '../domain/pedido.model';
 import { PedidosStore } from './pedidos.store';
 
@@ -11,6 +11,7 @@ function crearDetalleMock(parcial?: Partial<PedidoDetalle>): PedidoDetalle {
     libroHojas: 72,
     alumno: 'Alumno Demo',
     division: '6B',
+    tamanio: TAMANIO_IMPRESION.A5,
     precioCobrado: 10000,
     estadoImpresion: ESTADO_IMPRESION.PENDIENTE,
     fechaImpresion: null,
@@ -104,6 +105,25 @@ describe('PedidosStore', () => {
       store.filtros.update((actual) => ({ ...actual, division: '6A', busqueda: 'bruno' }));
 
       expect(store.pedidosFiltrados().length).toBe(0);
+    });
+  });
+
+  describe('filtro por tamaño', () => {
+    beforeEach(() => {
+      store.pedidos.set([
+        crearDetalleMock({ id: 'a4', alumno: 'Ana', tamanio: TAMANIO_IMPRESION.A4 }),
+        crearDetalleMock({ id: 'a5', alumno: 'Bruno', tamanio: TAMANIO_IMPRESION.A5 }),
+      ]);
+    });
+
+    it('debería mostrar todos los tamaños si no se elige ninguno', () => {
+      expect(store.pedidosFiltrados().length).toBe(2);
+    });
+
+    it('debería dejar solo los pedidos del tamaño elegido', () => {
+      store.filtros.update((actual) => ({ ...actual, tamanio: TAMANIO_IMPRESION.A4 }));
+
+      expect(store.pedidosFiltrados().map((pedido) => pedido.id)).toEqual(['a4']);
     });
   });
 });

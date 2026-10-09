@@ -64,7 +64,14 @@ type FiltroEstadoLibro = 'activos' | 'inactivos' | 'todos';
             <div class="libro-card-main">
               <a [routerLink]="['/libros', libro.id]" class="card-title">{{ libro.titulo }}</a>
               <p class="caption">
-                {{ libro.precio | peso }} • {{ libro.paginas }} páginas • {{ libro.hojas }} hojas
+                A4
+                @if (libro.precioA4 !== null) {
+                  {{ libro.precioA4 | peso }}
+                } @else {
+                  <span class="warning-text">sin precio</span>
+                }
+                • A5 {{ libro.precioA5 | peso }}
+                • {{ libro.paginas }} páginas • {{ libro.hojas }} hojas
               </p>
               @if (libro.observaciones) {
                 <p class="caption">{{ libro.observaciones }}</p>

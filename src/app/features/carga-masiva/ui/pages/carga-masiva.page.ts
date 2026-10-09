@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { TAMANIO_POR_DEFECTO, TAMANIOS_IMPRESION, TamanioImpresion } from '../../../../shared/constants/negocio.constants';
 import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { normalizarParaBusqueda } from '../../../../shared/utils/text-normalizer';
 import { etiquetaCurso, parsearCurso } from '../../../../shared/utils/curso.util';
+import { precioSegunTamanio } from '../../../libros/domain/libro.model';
 import { LibrosFacade } from '../../../libros/state/libros.facade';
 import { PedidosFacade } from '../../../pedidos/state/pedidos.facade';
 import { AlumnoParseado, parsearListaPegada } from '../../domain/parsear-lista.util';
@@ -42,9 +44,32 @@ const LARGO_MAXIMO_DIVISION = 10;
             }
           </select>
           @if (libroElegido(); as libro) {
-            <small class="caption">Cada pedido se crea con el precio del libro: {{ libro.precio | peso }}</small>
+            <small class="caption">
+              Precio del libro: A4
+              {{ libro.precioA4 !== null ? (libro.precioA4 | peso) : 'sin cargar' }} · A5 {{ libro.precioA5 | peso }}
+            </small>
           }
         </label>
+
+        <div class="field">
+          <span>Tamaño</span>
+          <div class="segmented-control segmented-control-2" role="group" aria-label="Tamaño de impresión del curso">
+            @for (tamanio of tamanios; track tamanio) {
+              <button
+                type="button"
+                class="segment-button"
+                [class.segment-button-active]="tamanioLote() === tamanio"
+                [attr.aria-pressed]="tamanioLote() === tamanio"
+                (click)="tamanioLote.set(tamanio)"
+              >
+                {{ tamanio }}
+              </button>
+            }
+          </div>
+          @if (tamanioSinPrecio(); as tamanio) {
+            <small class="field-error">El libro no tiene precio {{ tamanio }} cargado. Completalo en Libros antes de cargar.</small>
+          }
+        </div>
 
         <label class="field">
           <span>División</span>
@@ -73,8 +98,8 @@ const LARGO_MAXIMO_DIVISION = 10;
           (input)="cambiarLista($any($event.target).value)"
         ></textarea>
         <small class="caption">
-          Se limpian solos la numeración, los emojis y los espacios de más. Una nota entre paréntesis al final se
-          guarda como observación del pedido.
+          Se limpian solos la numeración, los emojis y los espacios de más. Una nota (A4) o (A5) al final define el
+          tamaño de ese alumno; cualquier otra nota entre paréntesis se guarda como observación.
         </small>
       </label>
 
@@ -104,7 +129,12 @@ const LARGO_MAXIMO_DIVISION = 10;
               }
             </span>
           </div>
-          <button type="button" class="primary-button" [disabled]="!aCrear().length || guardando()" (click)="confirmar()">
+          <button
+            type="button"
+            class="primary-button"
+            [disabled]="!aCrear().length || guardando() || tamanioSinPrecio()"
+            (click)="confirmar()"
+          >
             {{ guardando() ? 'Cargando...' : 'Crear ' + aCrear().length + ' pedidos' }}
           </button>
         </section>
@@ -138,7 +168,10 @@ const LARGO_MAXIMO_DIVISION = 10;
                       (change)="alternarFila($index)"
                     />
                   </td>
-                  <td>{{ fila.alumno }}</td>
+                  <td>
+                    {{ fila.alumno }}
+                    <div class="caption">{{ tamanioDeFila(fila) }}</div>
+                  </td>
                   <td>{{ fila.observaciones ?? '-' }}</td>
                   <td>
                     @if (fila.motivo === 'ya-cargado') {
@@ -170,7 +203,10 @@ export class CargaMasivaPageComponent {
   private readonly router = inject(Router);
 
   protected readonly largoMaximoDivision = LARGO_MAXIMO_DIVISION;
+  protected readonly tamanios = TAMANIOS_IMPRESION;
   protected readonly libroId = signal('');
+  /** Tamaño de todo el curso; una nota (A4) o (A5) en la linea lo pisa para ese alumno. */
+  protected readonly tamanioLote = signal<TamanioImpresion>(TAMANIO_POR_DEFECTO);
   protected readonly division = signal('');
   protected readonly listaPegada = signal('');
   protected readonly procesado = signal(false);
@@ -182,6 +218,17 @@ export class CargaMasivaPageComponent {
   protected readonly divisionValida = computed(() => this.division().trim().length <= LARGO_MAXIMO_DIVISION);
   protected readonly aCrear = computed(() => this.previsualizacion().filter((fila) => fila.incluir));
   protected readonly omitidos = computed(() => this.previsualizacion().filter((fila) => !fila.incluir));
+
+  /** Tamaño que el libro no tiene con precio entre los que se van a usar, para avisar antes de confirmar. */
+  protected readonly tamanioSinPrecio = computed(() => {
+    const libro = this.libroElegido();
+    if (!libro) return null;
+
+    // Antes de procesar la lista solo se conoce el tamaño elegido para el curso.
+    const filas = this.aCrear();
+    const usados = new Set(filas.length ? filas.map((fila) => this.tamanioDeFila(fila)) : [this.tamanioLote()]);
+    return [...usados].find((tamanio) => precioSegunTamanio(libro, tamanio) === null) ?? null;
+  });
 
   protected readonly vistaPreviaCurso = computed(() => etiquetaCurso(parsearCurso(this.division())));
 
@@ -239,6 +286,10 @@ export class CargaMasivaPageComponent {
     this.procesado.set(true);
   }
 
+  protected tamanioDeFila(fila: AlumnoParseado): TamanioImpresion {
+    return fila.tamanio ?? this.tamanioLote();
+  }
+
   protected alternarFila(indice: number): void {
     this.previsualizacion.update((filas) =>
       filas.map((fila, i) => (i === indice ? { ...fila, incluir: !fila.incluir } : fila)),
@@ -254,6 +305,7 @@ export class CargaMasivaPageComponent {
     const alumnos = this.aCrear().map((fila) => ({
       alumno: fila.alumno,
       observaciones: fila.observaciones,
+      tamanio: this.tamanioDeFila(fila),
     }));
 
     this.guardando.set(true);

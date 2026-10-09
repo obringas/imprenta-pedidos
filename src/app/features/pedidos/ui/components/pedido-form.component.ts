@@ -8,9 +8,13 @@ import {
   EstadoEntrega,
   EstadoImpresion,
   EstadoPago,
+  TAMANIO_POR_DEFECTO,
+  TAMANIOS_IMPRESION,
+  TamanioImpresion,
 } from '../../../../shared/constants/negocio.constants';
 import { EstadoBadgeComponent } from '../../../../shared/components/estado-badge.component';
 import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
+import { Libro, precioSegunTamanio } from '../../../libros/domain/libro.model';
 import { LibrosFacade } from '../../../libros/state/libros.facade';
 import { PedidoDetalle } from '../../domain/pedido.model';
 import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.utils';
@@ -52,13 +56,36 @@ import { calcularSaldo, determinarEstadoGeneral } from '../../domain/estado.util
             <small class="field-error">La division debe ser corta para identificar el curso.</small>
           }
         </label>
-        <label class="field">
-          <span>Precio</span>
-          <input type="number" formControlName="precioCobrado" [class.input-invalid]="mostrarError('precioCobrado')" />
-          @if (mostrarError('precioCobrado')) {
+        <div class="field">
+          <span>Tamaño y precio</span>
+          <div class="tamanio-precio">
+            <div class="segmented-control segmented-control-2" role="group" aria-label="Tamaño de impresión">
+              @for (tamanio of tamanios; track tamanio) {
+                <button
+                  type="button"
+                  class="segment-button"
+                  [class.segment-button-active]="form.controls.tamanio.value === tamanio"
+                  [attr.aria-pressed]="form.controls.tamanio.value === tamanio"
+                  (click)="setTamanio(tamanio)"
+                >
+                  {{ tamanio }}
+                </button>
+              }
+            </div>
+            <input
+              type="number"
+              inputmode="numeric"
+              aria-label="Precio"
+              formControlName="precioCobrado"
+              [class.input-invalid]="mostrarError('precioCobrado')"
+            />
+          </div>
+          @if (faltaPrecioDelLibro()) {
+            <small class="field-error">El libro no tiene precio {{ form.controls.tamanio.value }} cargado. Ingresalo a mano o completalo en Libros.</small>
+          } @else if (mostrarError('precioCobrado')) {
             <small class="field-error">Ingresa un precio mayor que 0.</small>
           }
-        </label>
+        </div>
       </div>
 
       <section class="field payment-section">
@@ -201,11 +228,13 @@ export class PedidoFormComponent {
   protected readonly ESTADO_PAGO = ESTADO_PAGO;
   protected readonly ESTADO_IMPRESION = ESTADO_IMPRESION;
   protected readonly ESTADO_ENTREGA = ESTADO_ENTREGA;
+  protected readonly tamanios = TAMANIOS_IMPRESION;
 
   protected readonly form = this.formBuilder.group({
     libroId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     alumno: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2)] }),
     division: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(10)] }),
+    tamanio: new FormControl<TamanioImpresion>(TAMANIO_POR_DEFECTO, { nonNullable: true, validators: [Validators.required] }),
     precioCobrado: new FormControl(0, { nonNullable: true, validators: [Validators.required, Validators.min(1)] }),
     estadoPago: new FormControl<EstadoPago>(ESTADO_PAGO.PENDIENTE, { nonNullable: true, validators: [Validators.required] }),
     montoCobrado: new FormControl(0, { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
@@ -230,6 +259,7 @@ export class PedidoFormComponent {
       libroHojas: this.pedido()?.libroHojas ?? 0,
       alumno: this.form.controls.alumno.value,
       division: this.form.controls.division.value || null,
+      tamanio: this.form.controls.tamanio.value,
       precioCobrado: this.form.controls.precioCobrado.value,
       estadoImpresion: this.form.controls.estadoImpresion.value,
       fechaImpresion: this.pedido()?.fechaImpresion ?? null,
@@ -261,6 +291,7 @@ export class PedidoFormComponent {
         libroId: pedido.libroId,
         alumno: pedido.alumno,
         division: pedido.division ?? '',
+        tamanio: pedido.tamanio,
         precioCobrado: pedido.precioCobrado,
         estadoPago: pedido.estadoPago,
         montoCobrado: pedido.montoCobrado,
@@ -301,6 +332,30 @@ export class PedidoFormComponent {
     }
 
     return 'El nombre del alumno debe tener al menos 2 caracteres.';
+  }
+
+  /**
+   * Cambiar el tamaño trae el precio del libro para ese tamaño, tambien al
+   * editar: es una accion explicita y el precio sigue siendo editable.
+   */
+  protected setTamanio(tamanio: TamanioImpresion): void {
+    if (this.form.controls.tamanio.value === tamanio) return;
+
+    this.form.controls.tamanio.setValue(tamanio);
+    this.aplicarPrecioDelLibro();
+  }
+
+  /**
+   * Solo avisa cuando el precio quedo sin completar: un pedido existente
+   * conserva su precio aunque el libro todavia no tenga cargado ese tamaño.
+   */
+  protected faltaPrecioDelLibro(): boolean {
+    const libro = this.libroSeleccionado();
+    return (
+      !!libro &&
+      this.form.controls.precioCobrado.value <= 0 &&
+      precioSegunTamanio(libro, this.form.controls.tamanio.value) === null
+    );
   }
 
   protected setEstadoPago(estado: EstadoPago): void {
@@ -348,12 +403,19 @@ export class PedidoFormComponent {
 
   private actualizarPrecioSegunLibro(): void {
     if (this.pedido()) return;
+    this.aplicarPrecioDelLibro();
+  }
 
-    const libroId = this.form.controls.libroId.value;
-    const libro = this.librosFacade.libros().find((item) => item.id === libroId);
+  /** Sin precio cargado para ese tamaño, el campo queda en 0 para obligar a completarlo. */
+  private aplicarPrecioDelLibro(): void {
+    const libro = this.libroSeleccionado();
     if (!libro) return;
 
-    this.form.controls.precioCobrado.setValue(libro.precio);
+    this.form.controls.precioCobrado.setValue(precioSegunTamanio(libro, this.form.controls.tamanio.value) ?? 0);
+  }
+
+  private libroSeleccionado(): Libro | null {
+    return this.librosFacade.obtenerPorId(this.form.controls.libroId.value);
   }
 
   private sincronizarMontoConPago(): void {

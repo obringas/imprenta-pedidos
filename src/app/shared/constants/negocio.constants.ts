@@ -20,6 +20,22 @@ export const ESTADO_ENTREGA = {
 
 export type EstadoEntrega = (typeof ESTADO_ENTREGA)[keyof typeof ESTADO_ENTREGA];
 
+export const TAMANIO_IMPRESION = {
+  A4: 'A4',
+  A5: 'A5',
+} as const;
+
+export type TamanioImpresion = (typeof TAMANIO_IMPRESION)[keyof typeof TAMANIO_IMPRESION];
+
+export const TAMANIOS_IMPRESION: readonly TamanioImpresion[] = [TAMANIO_IMPRESION.A4, TAMANIO_IMPRESION.A5];
+
+/** La mayoria de los pedidos son A5; el A4 llega marcado como excepcion. */
+export const TAMANIO_POR_DEFECTO: TamanioImpresion = TAMANIO_IMPRESION.A5;
+
+export function esTamanioImpresion(valor: string): valor is TamanioImpresion {
+  return (TAMANIOS_IMPRESION as readonly string[]).includes(valor);
+}
+
 export const ESTADO_GENERAL = {
   PENDIENTE: 'Pendiente',
   IMPRESO_CON_SALDO: 'Impreso con saldo',

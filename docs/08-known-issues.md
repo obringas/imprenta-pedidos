@@ -67,3 +67,37 @@ Bajo.
 
 ### Recomendacion
 Fusionar gradualmente el detalle historico en los documentos numerados y mover lo heredado a `docs/_legacy/` cuando se confirme la migracion completa.
+
+## Hojas y toner no distinguen A4 de A5
+
+### Fecha
+2026-10-08
+
+### Descripcion
+`libros.hojas` (`ceil(paginas / 2)`) y los KPI de hojas pendientes, hojas impresas y semaforo de toner tratan igual un pedido A4 que uno A5. Si el A5 se imprime con otra imposicion (por ejemplo dos paginas A5 por cara de A4), las hojas y el consumo reales de los pedidos A5 son menores a los que muestra el sistema.
+
+### Impacto
+Medio.
+
+### Modulo afectado
+`src/app/features/informes/state/informes.facade.ts`, vista `pedidos_detalle`, `shared/constants/negocio.constants.ts` (`calcularHojas`)
+
+### Recomendacion
+Confirmar con la usuaria como se imprime el A5 y, si corresponde, calcular las hojas por pedido segun su tamaño en lugar de tomarlas del libro.
+
+## `libros.precio_a4` nullable
+
+### Fecha
+2026-10-08
+
+### Descripcion
+La migracion A4/A5 deja `precio_a4` vacio en los libros existentes que no esten en la cotizacion 2026-10. La app exige ambos precios al guardar un libro, pero la base lo admite nulo.
+
+### Impacto
+Bajo.
+
+### Modulo afectado
+`public.libros`
+
+### Recomendacion
+Cuando todos los libros tengan precio A4 (`select count(*) from public.libros where precio_a4 is null` en 0), ejecutar `alter table public.libros alter column precio_a4 set not null;` y quitar el `null` de `Libro.precioA4`.

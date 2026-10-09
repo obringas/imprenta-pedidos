@@ -4,12 +4,13 @@ import { claveDivision, claveGrado, compararDivisiones, compararGrados, parsearC
 import { normalizarParaBusqueda } from '../../../shared/utils/text-normalizer';
 import { DIVISION_SIN_ASIGNAR, FiltroPedidos, PedidoDetalle } from '../domain/pedido.model';
 
-const FILTRO_INICIAL: FiltroPedidos = {
+export const FILTRO_INICIAL: FiltroPedidos = {
   busqueda: '',
   libroId: null,
   estadoGeneral: null,
   estadoPago: null,
   division: null,
+  tamanio: null,
   incluirInactivos: false,
 };
 
@@ -61,7 +62,7 @@ export class PedidosStore {
   });
 
   readonly pedidosFiltrados = computed(() => {
-    const { busqueda, libroId, estadoGeneral, estadoPago, division } = this.filtros();
+    const { busqueda, libroId, estadoGeneral, estadoPago, division, tamanio } = this.filtros();
     const termino = normalizarParaBusqueda(busqueda);
 
     return this.pedidosVisibles()
@@ -71,6 +72,7 @@ export class PedidosStore {
         if (estadoGeneral && pedido.estadoGeneral !== estadoGeneral) return false;
         if (estadoPago && pedido.estadoPago !== estadoPago) return false;
         if (division && (pedido.division?.trim() || DIVISION_SIN_ASIGNAR) !== division) return false;
+        if (tamanio && pedido.tamanio !== tamanio) return false;
         return true;
       })
       .sort((actual, siguiente) =>

@@ -1,5 +1,5 @@
 ﻿import { z } from 'zod';
-import { ESTADO_ENTREGA, ESTADO_IMPRESION, ESTADO_PAGO } from '../../../shared/constants/negocio.constants';
+import { ESTADO_ENTREGA, ESTADO_IMPRESION, ESTADO_PAGO, TAMANIO_IMPRESION } from '../../../shared/constants/negocio.constants';
 
 const fechaSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida').nullable().optional();
 
@@ -7,6 +7,7 @@ const pedidoBaseSchema = z.object({
   libroId: z.string().min(1, 'Libro requerido'),
   alumno: z.string().trim().min(2, 'Alumno requerido'),
   division: z.string().trim().max(10).nullable(),
+  tamanio: z.enum([TAMANIO_IMPRESION.A4, TAMANIO_IMPRESION.A5], { message: 'Elegí el tamaño A4 o A5.' }),
   precioCobrado: z.number().min(1, 'Precio inválido'),
   estadoPago: z.enum([ESTADO_PAGO.PENDIENTE, ESTADO_PAGO.SENA, ESTADO_PAGO.PAGADO]),
   montoCobrado: z.number().min(0, 'Monto inválido'),

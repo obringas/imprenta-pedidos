@@ -8,6 +8,10 @@ import { ActualizarLibroInput, CrearLibroInput, Libro } from '../domain/libro.mo
 
 const STORAGE_KEY = 'imprenta-libros';
 
+/** Lo guardado en localStorage antes de A4/A5 tenia un unico `precio`. */
+type LibroAlmacenado = Partial<Pick<Libro, 'precioA4' | 'precioA5'>> &
+  Omit<Libro, 'precioA4' | 'precioA5'> & { readonly precio?: number };
+
 export interface LibrosRepository {
   findAll(): Promise<Libro[]>;
   findById(id: string): Promise<Libro | null>;
@@ -29,7 +33,8 @@ export class LocalLibrosRepository implements LibrosRepository {
     const libro: Libro = {
       id: crypto.randomUUID(),
       titulo: input.titulo.trim(),
-      precio: input.precio,
+      precioA4: input.precioA4,
+      precioA5: input.precioA5,
       paginas: input.paginas,
       hojas: Math.ceil(input.paginas / 2),
       observaciones: input.observaciones,
@@ -64,8 +69,11 @@ export class LocalLibrosRepository implements LibrosRepository {
       return LIBROS_INICIALES;
     }
 
-    const libros = (JSON.parse(serializado) as Libro[]).map((libro) => ({
+    const libros = (JSON.parse(serializado) as LibroAlmacenado[]).map(({ precio, ...libro }) => ({
       ...libro,
+      // El precio unico de antes era el A5: con el se cargaban los pedidos.
+      precioA4: libro.precioA4 ?? null,
+      precioA5: libro.precioA5 ?? precio ?? 0,
       hojas: libro.hojas ?? Math.ceil(libro.paginas / 2),
       observaciones: libro.observaciones ?? null,
       margenGanancia: libro.margenGanancia ?? 156,
@@ -107,24 +115,11 @@ export class SupabaseLibrosRepository implements LibrosRepository {
 
   async create(input: CrearLibroInput): Promise<Libro> {
     const client = this.requireClient();
-    const payloadConMargen = {
-      titulo: input.titulo.trim(),
-      precio: input.precio,
-      paginas: input.paginas,
-      observaciones: input.observaciones,
-      margen_ganancia: input.margenGanancia,
-      activo: true,
-    };
+    const payloadConMargen = { ...this.aFila(input), activo: true };
 
     const { data, error } = await client.from('libros').insert(payloadConMargen as never).select('*').single();
     if (error && this.esColumnaMargenInexistente(error)) {
-      const payloadLegacy = {
-        titulo: input.titulo.trim(),
-        precio: input.precio,
-        paginas: input.paginas,
-        observaciones: input.observaciones,
-        activo: true,
-      };
+      const { margen_ganancia: _margen, ...payloadLegacy } = payloadConMargen;
 
       const reintento = await client.from('libros').insert(payloadLegacy as never).select('*').single();
       if (reintento.error) {
@@ -143,24 +138,11 @@ export class SupabaseLibrosRepository implements LibrosRepository {
 
   async update(id: string, input: ActualizarLibroInput): Promise<Libro> {
     const client = this.requireClient();
-    const payloadConMargen = {
-      titulo: input.titulo.trim(),
-      precio: input.precio,
-      paginas: input.paginas,
-      observaciones: input.observaciones,
-      margen_ganancia: input.margenGanancia,
-      activo: input.activo,
-    };
+    const payloadConMargen = { ...this.aFila(input), activo: input.activo };
 
     const { data, error } = await client.from('libros').update(payloadConMargen as never).eq('id', id).select('*').single();
     if (error && this.esColumnaMargenInexistente(error)) {
-      const payloadLegacy = {
-        titulo: input.titulo.trim(),
-        precio: input.precio,
-        paginas: input.paginas,
-        observaciones: input.observaciones,
-        activo: input.activo,
-      };
+      const { margen_ganancia: _margen, ...payloadLegacy } = payloadConMargen;
 
       const reintento = await client.from('libros').update(payloadLegacy as never).eq('id', id).select('*').single();
       if (reintento.error) {
@@ -185,11 +167,23 @@ export class SupabaseLibrosRepository implements LibrosRepository {
     return this.supabase;
   }
 
+  private aFila(input: CrearLibroInput | ActualizarLibroInput) {
+    return {
+      titulo: input.titulo.trim(),
+      precio_a4: input.precioA4,
+      precio_a5: input.precioA5,
+      paginas: input.paginas,
+      observaciones: input.observaciones,
+      margen_ganancia: input.margenGanancia,
+    };
+  }
+
   private mapLibro(row: Database['public']['Tables']['libros']['Row']): Libro {
     return {
       id: row.id,
       titulo: row.titulo,
-      precio: Number(row.precio),
+      precioA4: row.precio_a4 === null ? null : Number(row.precio_a4),
+      precioA5: Number(row.precio_a5),
       paginas: row.paginas,
       hojas: row.hojas,
       observaciones: row.observaciones,

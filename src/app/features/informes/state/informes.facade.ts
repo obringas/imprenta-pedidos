@@ -1,8 +1,15 @@
 import { Injectable, computed, inject } from '@angular/core';
+import { TamanioImpresion } from '../../../shared/constants/negocio.constants';
 import { normalizarParaBusqueda } from '../../../shared/utils/text-normalizer';
 import { LibrosFacade } from '../../libros/state/libros.facade';
 import { PedidoDetalle } from '../../pedidos/domain/pedido.model';
 import { PedidosFacade } from '../../pedidos/state/pedidos.facade';
+
+export interface FiltroInforme {
+  readonly libroId: string | null;
+  readonly busquedaAlumno: string;
+  readonly tamanio: TamanioImpresion | null;
+}
 
 type GrupoPendiente = {
   readonly libroId: string;
@@ -55,55 +62,55 @@ export class InformesFacade {
     };
   });
 
-  pendientesPagoPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
+  pendientesPagoPorLibro(filtro: FiltroInforme): PedidoDetalle[] {
     return this.pedidosFacade
       .pedidosDeLibrosActivos()
       .filter(
         (pedido) =>
           pedido.saldo > 0 &&
-          this.coincideFiltros(pedido, libroId, busquedaAlumno),
+          this.coincideFiltros(pedido, filtro),
       )
       .sort((a, b) => a.libroTitulo.localeCompare(b.libroTitulo) || a.alumno.localeCompare(b.alumno));
   }
 
-  totalSaldoPendiente(libroId: string | null, busquedaAlumno: string): number {
-    return this.pendientesPagoPorLibro(libroId, busquedaAlumno).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
+  totalSaldoPendiente(filtro: FiltroInforme): number {
+    return this.pendientesPagoPorLibro(filtro).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
   }
 
-  impresosPendientesPagoPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
-    return this.pendientesPagoPorLibro(libroId, busquedaAlumno).filter((pedido) => pedido.estadoImpresion === 'Impreso');
+  impresosPendientesPagoPorLibro(filtro: FiltroInforme): PedidoDetalle[] {
+    return this.pendientesPagoPorLibro(filtro).filter((pedido) => pedido.estadoImpresion === 'Impreso');
   }
 
-  totalSaldoImpresoPendiente(libroId: string | null, busquedaAlumno: string): number {
-    return this.impresosPendientesPagoPorLibro(libroId, busquedaAlumno).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
+  totalSaldoImpresoPendiente(filtro: FiltroInforme): number {
+    return this.impresosPendientesPagoPorLibro(filtro).reduce((acumulado, pedido) => acumulado + pedido.saldo, 0);
   }
 
-  faltanImprimirPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
+  faltanImprimirPorLibro(filtro: FiltroInforme): PedidoDetalle[] {
     return this.pedidosFacade
       .pedidosDeLibrosActivos()
-      .filter((pedido) => pedido.estadoImpresion === 'Pendiente' && this.coincideFiltros(pedido, libroId, busquedaAlumno));
+      .filter((pedido) => pedido.estadoImpresion === 'Pendiente' && this.coincideFiltros(pedido, filtro));
   }
 
-  sinEntregarPorLibro(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
+  sinEntregarPorLibro(filtro: FiltroInforme): PedidoDetalle[] {
     return this.pedidosFacade
       .pedidosDeLibrosActivos()
       .filter(
         (pedido) =>
           pedido.estadoImpresion === 'Impreso' &&
           pedido.estadoEntrega === 'Pendiente' &&
-          this.coincideFiltros(pedido, libroId, busquedaAlumno),
+          this.coincideFiltros(pedido, filtro),
       )
       .sort((a, b) => a.libroTitulo.localeCompare(b.libroTitulo) || a.alumno.localeCompare(b.alumno));
   }
 
-  totalSinEntregar(libroId: string | null, busquedaAlumno: string): number {
-    return this.sinEntregarPorLibro(libroId, busquedaAlumno).length;
+  totalSinEntregar(filtro: FiltroInforme): number {
+    return this.sinEntregarPorLibro(filtro).length;
   }
 
-  gruposFaltanImprimir(libroId: string | null, busquedaAlumno: string): GrupoPendiente[] {
+  gruposFaltanImprimir(filtro: FiltroInforme): GrupoPendiente[] {
     const grupos = new Map<string, GrupoPendiente>();
 
-    for (const pedido of this.faltanImprimirPorLibro(libroId, busquedaAlumno)) {
+    for (const pedido of this.faltanImprimirPorLibro(filtro)) {
       const actual = grupos.get(pedido.libroId);
 
       if (!actual) {
@@ -126,8 +133,8 @@ export class InformesFacade {
     return [...grupos.values()].sort((a, b) => a.libroTitulo.localeCompare(b.libroTitulo));
   }
 
-  totalHojasPendientes(libroId: string | null, busquedaAlumno: string): number {
-    return this.gruposFaltanImprimir(libroId, busquedaAlumno).reduce((acumulado, grupo) => acumulado + grupo.hojasTotales, 0);
+  totalHojasPendientes(filtro: FiltroInforme): number {
+    return this.gruposFaltanImprimir(filtro).reduce((acumulado, grupo) => acumulado + grupo.hojasTotales, 0);
   }
 
   readonly resumenPorLibro = computed<ResumenLibro[]>(() => {
@@ -165,10 +172,11 @@ export class InformesFacade {
     };
   }
 
-  private coincideFiltros(pedido: PedidoDetalle, libroId: string | null, busquedaAlumno: string): boolean {
-    const coincideLibro = !libroId || pedido.libroId === libroId;
-    const texto = normalizarParaBusqueda(busquedaAlumno);
+  private coincideFiltros(pedido: PedidoDetalle, filtro: FiltroInforme): boolean {
+    const coincideLibro = !filtro.libroId || pedido.libroId === filtro.libroId;
+    const coincideTamanio = !filtro.tamanio || pedido.tamanio === filtro.tamanio;
+    const texto = normalizarParaBusqueda(filtro.busquedaAlumno);
     const coincideAlumno = !texto || normalizarParaBusqueda(pedido.alumno).includes(texto);
-    return coincideLibro && coincideAlumno;
+    return coincideLibro && coincideTamanio && coincideAlumno;
   }
 }

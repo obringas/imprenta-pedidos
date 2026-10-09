@@ -5,7 +5,8 @@
         Row: {
           id: string;
           titulo: string;
-          precio: number;
+          precio_a4: number | null;
+          precio_a5: number;
           paginas: number;
           hojas: number;
           observaciones: string | null;
@@ -17,7 +18,8 @@
         Insert: {
           id?: string;
           titulo: string;
-          precio: number;
+          precio_a4?: number | null;
+          precio_a5: number;
           paginas: number;
           observaciones?: string | null;
           margen_ganancia?: number;
@@ -25,7 +27,8 @@
         };
         Update: {
           titulo?: string;
-          precio?: number;
+          precio_a4?: number | null;
+          precio_a5?: number;
           paginas?: number;
           observaciones?: string | null;
           margen_ganancia?: number;
@@ -79,6 +82,7 @@
           libro_id: string;
           alumno: string;
           division: string | null;
+          tamanio: 'A4' | 'A5';
           precio_cobrado: number;
           estado_impresion: 'Pendiente' | 'Impreso';
           fecha_impresion: string | null;
@@ -96,6 +100,7 @@
           libro_id: string;
           alumno: string;
           division?: string | null;
+          tamanio: 'A4' | 'A5';
           precio_cobrado: number;
           estado_impresion?: 'Pendiente' | 'Impreso';
           fecha_impresion?: string | null;
@@ -110,6 +115,7 @@
           libro_id?: string;
           alumno?: string;
           division?: string | null;
+          tamanio?: 'A4' | 'A5';
           precio_cobrado?: number;
           estado_impresion?: 'Pendiente' | 'Impreso';
           fecha_impresion?: string | null;
@@ -145,13 +151,15 @@
           observaciones: string | null;
           created_at: string;
           updated_at: string;
+          tamanio: 'A4' | 'A5';
         };
       };
       informes_resumen_por_libro: {
         Row: {
           libro_id: string;
           libro_titulo: string;
-          libro_precio: number;
+          libro_precio_a4: number | null;
+          libro_precio_a5: number;
           libro_hojas: number;
           total_pedidos: number;
           total_a_cobrar: number;

@@ -57,7 +57,8 @@ export class LibrosFacade {
     try {
       const actualizado = await this.repository.update(id, {
         titulo: libro.titulo,
-        precio: libro.precio,
+        precioA4: libro.precioA4,
+        precioA5: libro.precioA5,
         paginas: libro.paginas,
         observaciones: libro.observaciones,
         margenGanancia: libro.margenGanancia,

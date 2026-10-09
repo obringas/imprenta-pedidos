@@ -13,7 +13,7 @@ Estado relevado el `2026-04-16` a partir de:
 El sistema usa el schema `public` de Supabase y hoy tiene:
 
 - 3 tablas persistentes: `libros`, `pedidos`, `configuracion_insumos`
-- 3 enums: `estado_pago`, `estado_impresion`, `estado_entrega`
+- 4 enums: `estado_pago`, `estado_impresion`, `estado_entrega`, `tamanio_impresion`
 - 2 funciones: `set_updated_at`, `calcular_saldo`
 - 3 vistas operativas: `pedidos_detalle`, `informes_resumen`, `informes_resumen_por_libro`
 - triggers de `updated_at` en `libros`, `pedidos` y `configuracion_insumos`
@@ -37,6 +37,13 @@ El sistema usa el schema `public` de Supabase y hoy tiene:
 - `Pendiente`
 - `Entregado`
 
+### `public.tamanio_impresion`
+
+Agregado el `2026-10-08` (`supabase/migracion_tamanio_a4_a5.sql`).
+
+- `A4`
+- `A5`
+
 ## Tablas
 
 ### `public.libros`
@@ -45,7 +52,8 @@ El sistema usa el schema `public` de Supabase y hoy tiene:
 |---|---|---|---|
 | `id` | `uuid` | no | `gen_random_uuid()` |
 | `titulo` | `text` | no | |
-| `precio` | `numeric(12,2)` | no | `check (precio >= 0)` |
+| `precio_a4` | `numeric(12,2)` | si | `check (precio_a4 is null or precio_a4 >= 0)`; nulo solo en libros previos a A4/A5 |
+| `precio_a5` | `numeric(12,2)` | no | `check (precio_a5 >= 0)`; antes se llamaba `precio` |
 | `paginas` | `integer` | no | `check (paginas > 0)` |
 | `hojas` | `integer` | no | generada: `ceil(paginas / 2)` |
 | `observaciones` | `text` | si | |
@@ -73,6 +81,7 @@ Indices:
 | `libro_id` | `uuid` | no | FK a `public.libros(id)` |
 | `alumno` | `text` | no | |
 | `division` | `text` | si | |
+| `tamanio` | `public.tamanio_impresion` | no | sin default: cada alta lo declara |
 | `precio_cobrado` | `numeric(12,2)` | no | `check (precio_cobrado >= 0)` |
 | `estado_impresion` | `public.estado_impresion` | no | `Pendiente` |
 | `fecha_impresion` | `date` | si | |
@@ -173,6 +182,7 @@ Expone el join entre `pedidos` y `libros` con estas columnas:
 - `observaciones`
 - `created_at`
 - `updated_at`
+- `tamanio` (al final: `create or replace view` solo permite agregar columnas al final)
 
 Logica de `estado_general`:
 
@@ -200,7 +210,8 @@ Vista agregada por libro con:
 
 - `libro_id`
 - `libro_titulo`
-- `libro_precio`
+- `libro_precio_a4`
+- `libro_precio_a5`
 - `libro_hojas`
 - `total_pedidos`
 - `total_a_cobrar`

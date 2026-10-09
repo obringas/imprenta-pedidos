@@ -1,17 +1,20 @@
 import { Injectable, computed, inject } from '@angular/core';
+import { TamanioImpresion } from '../../../shared/constants/negocio.constants';
 import { AppError } from '../../../shared/errors/app-error';
 import { Result } from '../../../shared/utils/result';
 import { normalizarParaBusqueda } from '../../../shared/utils/text-normalizer';
+import { Libro, precioSegunTamanio } from '../../libros/domain/libro.model';
 import { LibrosFacade } from '../../libros/state/libros.facade';
 import { PEDIDOS_REPOSITORY } from '../data/pedidos.repository.token';
 import { ActualizarPedidoInput, FiltroPedidos, Pedido, PedidoDetalle } from '../domain/pedido.model';
 import { actualizarPedidoSchema, crearPedidoSchema } from '../domain/pedido.validator';
 import { calcularSaldo, determinarEstadoGeneral } from '../domain/estado.utils';
-import { PedidosStore } from './pedidos.store';
+import { FILTRO_INICIAL, PedidosStore } from './pedidos.store';
 
 export interface AltaMasivaAlumno {
   readonly alumno: string;
   readonly observaciones: string | null;
+  readonly tamanio: TamanioImpresion;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -58,14 +61,7 @@ export class PedidosFacade {
   }
 
   limpiarFiltros(): void {
-    this.store.filtros.set({
-      busqueda: '',
-      libroId: null,
-      estadoGeneral: null,
-      estadoPago: null,
-      division: null,
-      incluirInactivos: false,
-    });
+    this.store.filtros.set(FILTRO_INICIAL);
   }
 
   async crearPedido(input: unknown) {
@@ -103,12 +99,20 @@ export class PedidosFacade {
       return Result.error(AppError.validacion('alumnos', 'No hay alumnos para cargar.'));
     }
 
+    const tamanioSinPrecio = this.tamanioSinPrecio(libro, alumnos);
+    if (tamanioSinPrecio) {
+      return Result.error(
+        AppError.validacion('Libro', `"${libro.titulo}" no tiene precio ${tamanioSinPrecio} cargado. Completalo en Libros antes de continuar.`),
+      );
+    }
+
     const creados = await this.repository.createMany(
       alumnos.map((alumno) => ({
         libroId,
         alumno: alumno.alumno,
         division,
-        precioCobrado: libro.precio,
+        tamanio: alumno.tamanio,
+        precioCobrado: precioSegunTamanio(libro, alumno.tamanio) ?? 0,
         estadoPago: 'Pendiente' as const,
         montoCobrado: 0,
         observaciones: alumno.observaciones,
@@ -166,16 +170,7 @@ export class PedidosFacade {
   async toggleImpresion(pedido: PedidoDetalle): Promise<void> {
     const siguienteEstado = pedido.estadoImpresion === 'Impreso' ? 'Pendiente' : 'Impreso';
     await this.actualizarPedido(pedido.id, {
-      libroId: pedido.libroId,
-      alumno: pedido.alumno,
-      division: pedido.division,
-      precioCobrado: pedido.precioCobrado,
-      estadoPago: pedido.estadoPago,
-      montoCobrado: pedido.montoCobrado,
-      fechaPago: pedido.fechaPago,
-      observaciones: pedido.observaciones,
-      estadoEntrega: pedido.estadoEntrega,
-      fechaEntrega: pedido.fechaEntrega,
+      ...this.datosActuales(pedido),
       estadoImpresion: siguienteEstado,
       fechaImpresion: siguienteEstado === 'Impreso' ? this.hoy() : null,
     } satisfies ActualizarPedidoInput);
@@ -186,35 +181,19 @@ export class PedidosFacade {
     const siguienteMonto = siguienteEstado === 'Pagado' ? pedido.precioCobrado : 0;
 
     await this.actualizarPedido(pedido.id, {
-      libroId: pedido.libroId,
-      alumno: pedido.alumno,
-      division: pedido.division,
-      precioCobrado: pedido.precioCobrado,
+      ...this.datosActuales(pedido),
       estadoPago: siguienteEstado,
       montoCobrado: siguienteMonto,
       fechaPago: siguienteMonto > 0 ? this.hoy() : null,
-      observaciones: pedido.observaciones,
-      estadoEntrega: pedido.estadoEntrega,
-      fechaEntrega: pedido.fechaEntrega,
-      estadoImpresion: pedido.estadoImpresion,
-      fechaImpresion: pedido.fechaImpresion,
     } satisfies ActualizarPedidoInput);
   }
 
   async marcarPagado(pedido: PedidoDetalle): Promise<void> {
     await this.actualizarPedido(pedido.id, {
-      libroId: pedido.libroId,
-      alumno: pedido.alumno,
-      division: pedido.division,
-      precioCobrado: pedido.precioCobrado,
+      ...this.datosActuales(pedido),
       estadoPago: 'Pagado',
       montoCobrado: pedido.precioCobrado,
       fechaPago: this.hoy(),
-      observaciones: pedido.observaciones,
-      estadoEntrega: pedido.estadoEntrega,
-      fechaEntrega: pedido.fechaEntrega,
-      estadoImpresion: pedido.estadoImpresion,
-      fechaImpresion: pedido.fechaImpresion,
     } satisfies ActualizarPedidoInput);
   }
 
@@ -225,9 +204,36 @@ export class PedidosFacade {
    */
   async corregirDatosDelAlumno(pedido: PedidoDetalle, alumno: string, division: string | null) {
     return this.actualizarPedido(pedido.id, {
-      libroId: pedido.libroId,
+      ...this.datosActuales(pedido),
       alumno,
       division,
+    } satisfies ActualizarPedidoInput);
+  }
+
+  async toggleEntrega(pedido: PedidoDetalle): Promise<void> {
+    const siguienteEstado = pedido.estadoEntrega === 'Entregado' ? 'Pendiente' : 'Entregado';
+    await this.actualizarPedido(pedido.id, {
+      ...this.datosActuales(pedido),
+      estadoEntrega: siguienteEstado,
+      fechaEntrega: siguienteEstado === 'Entregado' ? this.hoy() : null,
+    } satisfies ActualizarPedidoInput);
+  }
+
+  /** Primer tamaño pedido que el libro todavia no tiene con precio, si hay alguno. */
+  private tamanioSinPrecio(libro: Libro, alumnos: readonly AltaMasivaAlumno[]): TamanioImpresion | null {
+    return alumnos.find((alumno) => precioSegunTamanio(libro, alumno.tamanio) === null)?.tamanio ?? null;
+  }
+
+  /**
+   * Todos los datos editables del pedido tal como estan. Las acciones rapidas
+   * parten de aca y pisan solo lo que cambian, para no perder ningun campo.
+   */
+  private datosActuales(pedido: PedidoDetalle): ActualizarPedidoInput {
+    return {
+      libroId: pedido.libroId,
+      alumno: pedido.alumno,
+      division: pedido.division,
+      tamanio: pedido.tamanio,
       precioCobrado: pedido.precioCobrado,
       estadoPago: pedido.estadoPago,
       montoCobrado: pedido.montoCobrado,
@@ -237,25 +243,7 @@ export class PedidosFacade {
       fechaImpresion: pedido.fechaImpresion,
       estadoEntrega: pedido.estadoEntrega,
       fechaEntrega: pedido.fechaEntrega,
-    } satisfies ActualizarPedidoInput);
-  }
-
-  async toggleEntrega(pedido: PedidoDetalle): Promise<void> {
-    const siguienteEstado = pedido.estadoEntrega === 'Entregado' ? 'Pendiente' : 'Entregado';
-    await this.actualizarPedido(pedido.id, {
-      libroId: pedido.libroId,
-      alumno: pedido.alumno,
-      division: pedido.division,
-      precioCobrado: pedido.precioCobrado,
-      estadoPago: pedido.estadoPago,
-      montoCobrado: pedido.montoCobrado,
-      fechaPago: pedido.fechaPago,
-      observaciones: pedido.observaciones,
-      estadoImpresion: pedido.estadoImpresion,
-      fechaImpresion: pedido.fechaImpresion,
-      estadoEntrega: siguienteEstado,
-      fechaEntrega: siguienteEstado === 'Entregado' ? this.hoy() : null,
-    } satisfies ActualizarPedidoInput);
+    };
   }
 
   private aDetalle(pedido: Pedido): PedidoDetalle {

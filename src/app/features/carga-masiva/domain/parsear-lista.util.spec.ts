@@ -41,14 +41,26 @@ describe('parsearListaPegada', () => {
   });
 
   it('debería guardar la nota entre paréntesis como observación', () => {
-    const { alumnos } = parsearListaPegada('32. Mileka Levy Cein ✅(A4)');
+    const { alumnos } = parsearListaPegada('32. Mileka Levy Cein ✅(sin tapa)');
 
     expect(alumnos[0].alumno).toBe('Mileka Levy Cein');
-    expect(alumnos[0].observaciones).toBe('A4');
+    expect(alumnos[0].observaciones).toBe('sin tapa');
+    expect(alumnos[0].tamanio).toBeNull();
   });
 
-  it('debería dejar la observación en null cuando no hay nota', () => {
-    expect(parsearListaPegada('1. Ana Paz').alumnos[0].observaciones).toBeNull();
+  it('debería tomar una nota (A4) como tamaño y no como observación', () => {
+    const { alumnos } = parsearListaPegada('32. Mileka Levy Cein ✅(A4)\n33. Ana Paz (a5)');
+
+    expect(alumnos.map((a) => a.alumno)).toEqual(['Mileka Levy Cein', 'Ana Paz']);
+    expect(alumnos.map((a) => a.tamanio)).toEqual(['A4', 'A5']);
+    expect(alumnos.map((a) => a.observaciones)).toEqual([null, null]);
+  });
+
+  it('debería dejar observación y tamaño en null cuando no hay nota', () => {
+    const { alumnos } = parsearListaPegada('1. Ana Paz');
+
+    expect(alumnos[0].observaciones).toBeNull();
+    expect(alumnos[0].tamanio).toBeNull();
   });
 
   it('debería conservar tildes y eñes del nombre', () => {

@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { TAMANIOS_IMPRESION, TamanioImpresion, esTamanioImpresion } from '../../../../shared/constants/negocio.constants';
 import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { LibrosFacade } from '../../../libros/state/libros.facade';
 import { PedidoDetalle } from '../../../pedidos/domain/pedido.model';
 import { PedidosFacade } from '../../../pedidos/state/pedidos.facade';
-import { InformesFacade } from '../../state/informes.facade';
+import { FiltroInforme, InformesFacade } from '../../state/informes.facade';
 
 type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-imprimir' | 'sin-entregar';
 
@@ -44,6 +45,16 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
               <option value="">Todos</option>
               @for (libro of librosFiltrables(); track libro.id) {
                 <option [value]="libro.id">{{ libro.titulo }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Tamaño</span>
+            <select [value]="tamanioFiltro() ?? ''" (change)="cambiarTamanio($any($event.target).value)">
+              <option value="">Todos</option>
+              @for (tamanio of tamanios; track tamanio) {
+                <option [value]="tamanio">{{ tamanio }}</option>
               }
             </select>
           </label>
@@ -128,11 +139,11 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
           <span class="caption">Pedidos con saldo pendiente</span>
         </div>
 
-        @for (pedido of facade.pendientesPagoPorLibro(libroFiltroId(), busquedaAlumno()); track pedido.id) {
+        @for (pedido of facade.pendientesPagoPorLibro(filtro()); track pedido.id) {
           <div class="card-row report-row">
             <div>
               <strong>{{ pedido.alumno }}</strong>
-              <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }}</p>
+              <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }} • {{ pedido.tamanio }}</p>
             </div>
             <div class="card-meta">
               <strong class="text-danger">{{ pedido.saldo | peso }}</strong>
@@ -145,7 +156,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
 
         <footer class="report-footer">
           <span>Total saldo pendiente</span>
-          <strong class="text-danger">{{ facade.totalSaldoPendiente(libroFiltroId(), busquedaAlumno()) | peso }}</strong>
+          <strong class="text-danger">{{ facade.totalSaldoPendiente(filtro()) | peso }}</strong>
         </footer>
       </section>
     }
@@ -157,11 +168,11 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
           <span class="caption">Pedidos ya impresos con saldo pendiente</span>
         </div>
 
-        @for (pedido of facade.impresosPendientesPagoPorLibro(libroFiltroId(), busquedaAlumno()); track pedido.id) {
+        @for (pedido of facade.impresosPendientesPagoPorLibro(filtro()); track pedido.id) {
           <div class="card-row report-row">
             <div>
               <strong>{{ pedido.alumno }}</strong>
-              <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? 'â€¢ ' + pedido.division : '' }}</p>
+              <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }} • {{ pedido.tamanio }}</p>
             </div>
             <div class="card-meta">
               <strong class="text-danger">{{ pedido.saldo | peso }}</strong>
@@ -174,14 +185,14 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
 
         <footer class="report-footer">
           <span>Total saldo impreso pendiente</span>
-          <strong class="text-danger">{{ facade.totalSaldoImpresoPendiente(libroFiltroId(), busquedaAlumno()) | peso }}</strong>
+          <strong class="text-danger">{{ facade.totalSaldoImpresoPendiente(filtro()) | peso }}</strong>
         </footer>
       </section>
     }
 
     @if (tabActiva() === 'faltan-imprimir') {
       <section class="stack">
-        @for (grupo of facade.gruposFaltanImprimir(libroFiltroId(), busquedaAlumno()); track grupo.libroId) {
+        @for (grupo of facade.gruposFaltanImprimir(filtro()); track grupo.libroId) {
           <details class="card details-card" open>
             <summary class="details-summary">
               <div>
@@ -196,7 +207,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
                 <div class="card-row report-row">
                   <div>
                     <strong>{{ pedido.alumno }}</strong>
-                    <p class="caption">{{ pedido.division || 'Sin division' }} • {{ pedido.libroHojas }} hojas</p>
+                    <p class="caption">{{ pedido.division || 'Sin division' }} • {{ pedido.tamanio }} • {{ pedido.libroHojas }} hojas</p>
                   </div>
                   <button type="button" class="secondary-button" (click)="marcarImpreso(pedido)">Marcar impreso</button>
                 </div>
@@ -209,7 +220,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
 
         <footer class="report-footer card">
           <span>Total hojas necesarias</span>
-          <strong>{{ facade.totalHojasPendientes(libroFiltroId(), busquedaAlumno()) }}</strong>
+          <strong>{{ facade.totalHojasPendientes(filtro()) }}</strong>
         </footer>
       </section>
     }
@@ -221,11 +232,11 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
           <span class="caption">Pedidos impresos y todavia pendientes de entrega</span>
         </div>
 
-        @for (pedido of facade.sinEntregarPorLibro(libroFiltroId(), busquedaAlumno()); track pedido.id) {
+        @for (pedido of facade.sinEntregarPorLibro(filtro()); track pedido.id) {
           <div class="card-row report-row">
             <div>
               <strong>{{ pedido.alumno }}</strong>
-              <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }}</p>
+              <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }} • {{ pedido.tamanio }}</p>
             </div>
             <div class="card-meta">
               <strong>{{ pedido.estadoPago }}</strong>
@@ -238,7 +249,7 @@ type InformeTab = 'resumen' | 'sin-pagar' | 'impresos-sin-pagar' | 'faltan-impri
 
         <footer class="report-footer">
           <span>Total pendientes de entrega</span>
-          <strong>{{ facade.totalSinEntregar(libroFiltroId(), busquedaAlumno()) }}</strong>
+          <strong>{{ facade.totalSinEntregar(filtro()) }}</strong>
         </footer>
       </section>
     }
@@ -253,13 +264,20 @@ export class InformesPageComponent {
   protected readonly tabActiva = signal<InformeTab>('resumen');
   protected readonly libroFiltroId = signal<string | null>(null);
   protected readonly busquedaAlumno = signal('');
+  protected readonly tamanioFiltro = signal<TamanioImpresion | null>(null);
+  protected readonly tamanios = TAMANIOS_IMPRESION;
+  protected readonly filtro = computed<FiltroInforme>(() => ({
+    libroId: this.libroFiltroId(),
+    busquedaAlumno: this.busquedaAlumno(),
+    tamanio: this.tamanioFiltro(),
+  }));
   protected readonly librosFiltrables = computed(() => {
-    const pedidos = this.pedidosParaTab(null);
+    const pedidos = this.pedidosParaTab({ ...this.filtro(), libroId: null });
     const libroIds = new Set(pedidos.map((pedido) => pedido.libroId));
     return this.librosFacade.activos().filter((libro) => libroIds.has(libro.id));
   });
   protected readonly totalItemsFiltrados = computed(() => {
-    return this.pedidosParaTab(this.libroFiltroId()).length;
+    return this.pedidosParaTab(this.filtro()).length;
   });
 
   constructor() {
@@ -272,6 +290,11 @@ export class InformesPageComponent {
   protected limpiarFiltros(): void {
     this.libroFiltroId.set(null);
     this.busquedaAlumno.set('');
+    this.tamanioFiltro.set(null);
+  }
+
+  protected cambiarTamanio(valor: string): void {
+    this.tamanioFiltro.set(esTamanioImpresion(valor) ? valor : null);
   }
 
   protected async marcarPagado(pedido: PedidoDetalle): Promise<void> {
@@ -301,27 +324,25 @@ export class InformesPageComponent {
     }
   }
 
-  private pedidosParaTab(libroId: string | null): PedidoDetalle[] {
-    const busquedaAlumno = this.busquedaAlumno();
-
+  private pedidosParaTab(filtro: FiltroInforme): PedidoDetalle[] {
     if (this.tabActiva() === 'sin-pagar') {
-      return this.facade.pendientesPagoPorLibro(libroId, busquedaAlumno);
+      return this.facade.pendientesPagoPorLibro(filtro);
     }
 
     if (this.tabActiva() === 'impresos-sin-pagar') {
-      return this.facade.impresosPendientesPagoPorLibro(libroId, busquedaAlumno);
+      return this.facade.impresosPendientesPagoPorLibro(filtro);
     }
 
-    return this.pedidosOperativos(libroId, busquedaAlumno);
+    return this.pedidosOperativos(filtro);
   }
 
-  private pedidosOperativos(libroId: string | null, busquedaAlumno: string): PedidoDetalle[] {
+  private pedidosOperativos(filtro: FiltroInforme): PedidoDetalle[] {
     if (this.tabActiva() === 'faltan-imprimir') {
-      return this.facade.faltanImprimirPorLibro(libroId, busquedaAlumno);
+      return this.facade.faltanImprimirPorLibro(filtro);
     }
 
     if (this.tabActiva() === 'sin-entregar') {
-      return this.facade.sinEntregarPorLibro(libroId, busquedaAlumno);
+      return this.facade.sinEntregarPorLibro(filtro);
     }
 
     return [];

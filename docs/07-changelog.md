@@ -1,5 +1,117 @@
 # 07-changelog.md - Memoria de cambios
 
+## [2026-10-08] - Agente: Claude (cotizacion 2026-10)
+
+### Cambios
+- Nuevo script `supabase/cotizacion_2026_10_libros_activos.sql`, solo para los 5 libros de la cotizacion que esten activos:
+  - detecta el tamaño de sus pedidos: el precio mas repetido de cada libro es el A5 y los pedidos con precio mayor (subido a mano) o con `A4` en observaciones pasan a A4;
+  - re-precia segun su tamaño los pedidos con pago Pendiente, con el `precio_a4` y `precio_a5` que ya tiene cada libro en la base. Los precios se cargaron a mano despues de la migracion y el usuario confirmo que esos son los correctos (difieren de la cotizacion en Cuentos de la selva, Heredé un fantasma y El club de los detectives feroces). El script no modifica libros.
+  Por defecto corre en vista previa. La deteccion de tamaño corre solo en libros que todavia no tienen pedidos A4, asi reejecutar no reclasifica.
+- Correccion: el precio unico actual de cada libro es el A5, no el A4. La migracion lo pasa a `precio_a5`, deja `precio_a4` vacio y ya no detecta A4 por observaciones: deja todos los pedidos en A5. En la app, el precio que puede faltar pasa a ser el A4.
+
+### Motivo
+El usuario paso la cotizacion de 2026-10 como referencia de precios para los libros activos y sus pedidos, e informo que los pedidos se cargaron como A5 y a los A4 se les subio el precio a mano.
+
+### Archivos afectados
+- `supabase/cotizacion_2026_10_libros_activos.sql` (nuevo)
+- `supabase/migracion_tamanio_a4_a5.sql`
+- `supabase/imprenta-pedidos.sql`
+- `src/app/core/supabase/database.types.ts`
+- `src/app/features/libros/domain/libro.model.ts`
+- `src/app/features/libros/domain/libro.model.spec.ts`
+- `src/app/features/libros/data/libros.repository.ts`
+- `src/app/features/libros/ui/pages/libro-form.page.ts`
+- `src/app/features/libros/ui/pages/libros-lista.page.ts`
+- `src/app/features/carga-masiva/ui/pages/carga-masiva.page.ts`
+
+### Decisiones tomadas
+Ver ADR-0003 en `06-decisions.md`. Primero se implemento una escala de 4 precios por curso (menos de 15 / 15 o mas). El usuario la descarto porque confundia, y se revirtio por completo antes de publicarla. El libro sigue con dos precios, A4 y A5.
+
+Los libros de la cotizacion se buscan entre los activos por titulo, sin mayusculas ni acentos. Si un titulo coincide con mas de un libro activo, el script se detiene sin cambiar nada. Pagados y señas conservan su precio.
+
+### Validaciones realizadas
+- `npm run build` y `npm test` (44 de 44) despues de revertir la escala y de invertir cual precio puede faltar.
+- Los scripts `migracion_tamanio_a4_a5.sql` y `cotizacion_2026_10_libros_activos.sql` se ejecutaron contra PGlite (Postgres 17 en WebAssembly, instalado fuera del proyecto) con el schema actual de produccion y datos de prueba que imitan la carga real (libro a precio A5, A4 con precio subido a mano). Pasaron 33 controles, entre ellos: los precios del libro no se tocan y se usan los de la base; el precio actual queda como A5; la migracion deja todo en A5 sin tocar observaciones; la vista previa no modifica nada; A4 detectado por precio mayor (pendiente, pagado y seña) y por observacion; un pedido con descuento queda A5; pendientes A4 a 6.800 y A5 a 3.500; pagados y señas conservan su precio; un libro activo fuera de la cotizacion no se toca, aunque tenga un pedido mas caro; reejecutar no reclasifica un A5 pagado al precio viejo; detencion ante un titulo ambiguo.
+- El schema base `imprenta-pedidos.sql` se instalo y reejecuto sin errores en una base vacia.
+- No se ejecuto nada contra la base real.
+
+### Pendientes / Follow-ups
+- Ejecutar en Supabase, en orden: `migracion_tamanio_a4_a5.sql`; despues `cotizacion_2026_10_libros_activos.sql` en vista previa, revisar el resultado y volver a ejecutarlo con `true`. Publicar la app enseguida.
+- Cargar desde Libros el precio A5 de los libros activos que no estan en la cotizacion.
+
+## [2026-10-08] - Agente: Claude
+
+### Cambios
+- Los libros tienen dos precios: `Precio A4` y `Precio A5`. El formulario de libro exige ambos.
+- Cada pedido guarda su tamaño (`A4` o `A5`). En el alta, el selector A4/A5 está al lado del precio y lo completa con el precio del libro para ese tamaño.
+- Al editar un pedido, cambiar el tamaño trae el precio vigente del libro para el nuevo tamaño. Abrir el pedido sin tocar el tamaño no altera su precio.
+- Carga masiva: se elige el tamaño de todo el curso. Una nota `(A4)` o `(A5)` al final de la línea define el tamaño de ese alumno en lugar de guardarse como observación. Cada pedido se crea con el precio de su tamaño.
+- Filtro por tamaño en Pedidos (escritorio y celular, con chip), en Informes (pestañas operativas) y en Listados por curso. El tamaño se muestra en las filas de las tres pantallas.
+- El listado de libros muestra ambos precios y marca `sin precio` cuando falta el A5.
+- Nuevo script `supabase/migracion_tamanio_a4_a5.sql` y actualización del schema base `supabase/imprenta-pedidos.sql`.
+- `PedidosFacade`: las acciones rápidas (impresión, pago, entrega, corrección de alumno) parten de un único `datosActuales(pedido)` en lugar de repetir los 12 campos en cada método.
+- `InformesFacade`: los métodos de filtrado reciben un `FiltroInforme` en lugar de `(libroId, busquedaAlumno)`.
+- Corregido el desborde horizontal en celular cuando una tabla es más ancha que la pantalla (`.content-area` sin `min-width: 0`). Pasaba en la carga masiva desde antes de este cambio.
+- Corregido un separador con mojibake (`â€¢`) en la pestaña `Imp. sin pagar` de Informes.
+
+### Motivo
+Los libros se imprimen en A4 y en A5, con precios distintos. Hasta ahora el tamaño se anotaba a mano en observaciones y el precio era uno solo.
+
+### Archivos afectados
+- `supabase/migracion_tamanio_a4_a5.sql` (nuevo)
+- `supabase/imprenta-pedidos.sql`
+- `src/app/core/supabase/database.types.ts`
+- `src/app/shared/constants/negocio.constants.ts`
+- `src/app/features/libros/domain/libro.model.ts`
+- `src/app/features/libros/domain/libro.model.spec.ts` (nuevo)
+- `src/app/features/libros/data/libros.repository.ts`
+- `src/app/features/libros/state/libros.facade.ts`
+- `src/app/features/libros/ui/pages/libro-form.page.ts`
+- `src/app/features/libros/ui/pages/libros-lista.page.ts`
+- `src/app/features/pedidos/domain/pedido.model.ts`
+- `src/app/features/pedidos/domain/pedido.validator.ts`
+- `src/app/features/pedidos/domain/estado.utils.spec.ts`
+- `src/app/features/pedidos/data/pedidos.repository.ts`
+- `src/app/features/pedidos/state/pedidos.store.ts`
+- `src/app/features/pedidos/state/pedidos.store.spec.ts`
+- `src/app/features/pedidos/state/pedidos.facade.ts`
+- `src/app/features/pedidos/ui/components/pedido-form.component.ts`
+- `src/app/features/pedidos/ui/pages/pedidos-lista.page.ts`
+- `src/app/features/carga-masiva/domain/parsear-lista.util.ts`
+- `src/app/features/carga-masiva/domain/parsear-lista.util.spec.ts`
+- `src/app/features/carga-masiva/ui/pages/carga-masiva.page.ts`
+- `src/app/features/informes/state/informes.facade.ts`
+- `src/app/features/informes/ui/pages/informes.page.ts`
+- `src/app/features/listados/ui/pages/listado-curso.page.ts`
+- `src/app/features/data/mock-data.ts`
+- `src/styles.css`
+
+### Decisiones tomadas
+Ver ADR-0002 en `06-decisions.md`. En resumen: el precio único actual pasa a ser el A5, `precio_a4` queda nullable en la base para los libros existentes, y la migración deja todos los pedidos en A5. (Primero se había tomado el precio actual como A4 y detectado los A4 por observaciones; el usuario lo corrigió el mismo día, ver la entrada de la cotización 2026-10).
+
+El precio sugerido del formulario de libro se sigue calculando con los insumos configurados, que son A4. Por eso el botón ahora dice `Usar como precio A4`.
+
+En la carga masiva y en Listados el tamaño se muestra debajo del nombre del alumno, no en una columna aparte. Con una columna más, en 375px el estado de cada fila (y en Listados el botón `Editar`) quedaba fuera de la pantalla.
+
+En el formulario de pedido, el aviso de libro sin precio para ese tamaño aparece solo cuando el precio quedó en 0. Un pedido A5 existente de un libro que todavía no tiene precio A5 conserva su precio y no muestra el aviso.
+
+### Validaciones realizadas
+- `npm run build` y `npm test` (44 de 44, con 7 casos nuevos: precio según tamaño, filtro por tamaño y nota `(A4)` en la lista pegada).
+- Validación manual en viewport 375x812 contra el repositorio local (localStorage con datos mock), con una configuración de serve temporal que se borró al terminar. No se usó la base real porque todavía no tiene las columnas nuevas.
+  - Alta: A5 por defecto con el precio A5. A4 cambia el precio a 10.300. Con `Pagado`, cambiar el tamaño mantiene el monto igual al precio. El pedido se guarda con su tamaño.
+  - Libro viejo sin uno de los dos precios: el listado muestra `sin precio`, el formulario marca el campo faltante y en el alta de pedido de ese tamaño aparece el aviso con el precio en 0, así que no se puede guardar. (Validado con el A5 faltante; después se invirtió cuál precio puede faltar y el código es simétrico.)
+  - Carga masiva con `Mileka Levy (A4)` y `Beto Ruiz (sin tapa)`: Mileka quedó A4 a 10.300, el resto A5 a 7.200 y `sin tapa` quedó como observación. Con un libro sin precio A5, el aviso aparece y el botón `Crear` se deshabilita.
+  - Filtro A4 en Pedidos devuelve 4 de 10 y muestra el chip. En Informes > Faltan imprimir, A4 baja de 7 a 3 resultados y de 468 a 192 hojas. En Listados, A5 deja 3 alumnos.
+  - `Marcar impreso` desde Informes conserva el tamaño y el precio del pedido.
+  - Abrir un pedido existente para editarlo no modifica su precio.
+  - En 375px ninguna pantalla tiene scroll horizontal y la consola no muestra errores.
+- El script SQL no se ejecutó contra la base: queda a cargo del usuario desde el SQL Editor.
+
+### Pendientes / Follow-ups
+- Ejecutar `supabase/migracion_tamanio_a4_a5.sql` y publicar esta versión inmediatamente después (la versión anterior lee `libros.precio`, que deja de existir). Ver tambien la entrada de la cotizacion 2026-10.
+- Cargar el precio A5 de cada libro activo desde Libros. Mientras falte, el alta en A5 de ese libro pide el precio a mano y la carga masiva en A5 queda bloqueada.
+- Hojas y toner no distinguen A4 de A5. Registrado en `08-known-issues.md`.
+
 ## [2026-08-03] - Agente: Claude
 
 ### Cambios

@@ -1,4 +1,4 @@
-import { ESTADO_ENTREGA, ESTADO_GENERAL, ESTADO_IMPRESION, ESTADO_PAGO } from '../../../shared/constants/negocio.constants';
+import { ESTADO_ENTREGA, ESTADO_GENERAL, ESTADO_IMPRESION, ESTADO_PAGO, TAMANIO_IMPRESION } from '../../../shared/constants/negocio.constants';
 import { Pedido } from './pedido.model';
 import { determinarEstadoGeneral } from './estado.utils';
 
@@ -10,6 +10,7 @@ function crearPedidoMock(parcial?: Partial<Pedido>): Pedido {
     libroHojas: 72,
     alumno: 'Alumno Demo',
     division: 'A',
+    tamanio: TAMANIO_IMPRESION.A5,
     precioCobrado: 10000,
     estadoImpresion: ESTADO_IMPRESION.PENDIENTE,
     fechaImpresion: null,

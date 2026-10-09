@@ -1,3 +1,5 @@
+import { TamanioImpresion } from '../../../shared/constants/negocio.constants';
+
 /**
  * Interpreta una lista de alumnos pegada desde WhatsApp.
  *
@@ -22,10 +24,14 @@ const NUMERACION = /^\d{1,3}\s*[-._):\]]*\s*/;
 const VINETAS = /^[-*•·]\s*/;
 /** Nota entre parentesis al final: se guarda como observacion del pedido. */
 const NOTA_FINAL = /\(([^)]*)\)\s*$/;
+/** Una nota que es solo el tamaño (`(A4)`) define el tamaño del pedido. */
+const NOTA_TAMANIO = /^A[45]$/i;
 
 export interface AlumnoParseado {
   readonly alumno: string;
   readonly observaciones: string | null;
+  /** Tamaño indicado en la propia linea; null si hay que usar el elegido para todo el curso. */
+  readonly tamanio: TamanioImpresion | null;
   /** Linea original, para poder mostrar de donde salio cada fila. */
   readonly lineaOriginal: string;
 }
@@ -66,10 +72,13 @@ function limpiarLinea(linea: string): Omit<AlumnoParseado, 'lineaOriginal'> | nu
   valor = valor.replace(VINETAS, '').replace(NUMERACION, '').trim();
 
   const nota = NOTA_FINAL.exec(valor);
-  const observaciones = nota?.[1]?.trim() || null;
+  const textoNota = nota?.[1]?.trim() || null;
   if (nota) {
     valor = valor.slice(0, nota.index).trim();
   }
+
+  const tamanio = textoNota && NOTA_TAMANIO.test(textoNota) ? (textoNota.toUpperCase() as TamanioImpresion) : null;
+  const observaciones = tamanio ? null : textoNota;
 
   valor = valor.replace(/\s{2,}/g, ' ').trim();
 
@@ -78,5 +87,5 @@ function limpiarLinea(linea: string): Omit<AlumnoParseado, 'lineaOriginal'> | nu
     return null;
   }
 
-  return { alumno: valor, observaciones };
+  return { alumno: valor, observaciones, tamanio };
 }

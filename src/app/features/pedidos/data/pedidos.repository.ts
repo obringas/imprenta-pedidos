@@ -1,5 +1,6 @@
 ﻿import { inject, Injectable } from '@angular/core';
 import { SUPABASE_CLIENT } from '../../../core/supabase/supabase.client';
+import { TAMANIO_POR_DEFECTO } from '../../../shared/constants/negocio.constants';
 import { AppError } from '../../../shared/errors/app-error';
 import { normalizarTextoMojibake } from '../../../shared/utils/text-normalizer';
 import { PEDIDOS_INICIALES } from '../../data/mock-data';
@@ -111,6 +112,8 @@ export class LocalPedidosRepository implements PedidosRepository {
     const pedidos = (JSON.parse(serializado) as Pedido[]).map((pedido) => ({
       ...pedido,
       libroHojas: pedido.libroHojas ?? 0,
+      // Pedidos guardados antes de A4/A5: mismo criterio que la migracion SQL.
+      tamanio: pedido.tamanio ?? TAMANIO_POR_DEFECTO,
       fechaImpresion: pedido.fechaImpresion ?? null,
       fechaEntrega: pedido.fechaEntrega ?? null,
       fechaPago: pedido.fechaPago ?? null,
@@ -158,6 +161,7 @@ export class SupabasePedidosRepository implements PedidosRepository {
       libro_id: input.libroId,
       alumno: input.alumno.trim(),
       division: input.division,
+      tamanio: input.tamanio,
       precio_cobrado: input.precioCobrado,
       estado_pago: input.estadoPago,
       monto_cobrado: input.montoCobrado,
@@ -198,6 +202,7 @@ export class SupabasePedidosRepository implements PedidosRepository {
       libro_id: input.libroId,
       alumno: input.alumno.trim(),
       division: input.division,
+      tamanio: input.tamanio,
       precio_cobrado: input.precioCobrado,
       estado_pago: input.estadoPago,
       monto_cobrado: input.montoCobrado,
@@ -221,6 +226,7 @@ export class SupabasePedidosRepository implements PedidosRepository {
       libro_id: input.libroId,
       alumno: input.alumno.trim(),
       division: input.division,
+      tamanio: input.tamanio,
       precio_cobrado: input.precioCobrado,
       estado_impresion: input.estadoImpresion,
       fecha_impresion: input.fechaImpresion,
@@ -268,6 +274,7 @@ export class SupabasePedidosRepository implements PedidosRepository {
     libro_hojas: number;
     alumno: string;
     division: string | null;
+    tamanio: 'A4' | 'A5';
     precio_cobrado: number;
     estado_impresion: 'Pendiente' | 'Impreso';
     fecha_impresion: string | null;
@@ -287,6 +294,7 @@ export class SupabasePedidosRepository implements PedidosRepository {
       libroHojas: row.libro_hojas,
       alumno: row.alumno,
       division: row.division,
+      tamanio: row.tamanio,
       precioCobrado: Number(row.precio_cobrado),
       estadoImpresion: row.estado_impresion,
       fechaImpresion: row.fecha_impresion,

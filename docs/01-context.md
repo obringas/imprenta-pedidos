@@ -24,7 +24,9 @@ Flujo principal:
 Reglas criticas:
 
 - `hojas = ceil(paginas / 2)` porque la impresion es doble faz.
-- El precio se copia al pedido al crearlo y no cambia si luego cambia el libro.
+- Cada libro tiene precio A4 y precio A5. Cada pedido tiene un tamaño (`A4` o `A5`); por defecto es A5.
+- El precio se copia al pedido al crearlo, segun su tamaño, y no cambia si luego cambia el libro. Si se cambia el tamaño de un pedido, se trae el precio vigente del libro para el nuevo tamaño.
+- En la carga masiva, una nota `(A4)` o `(A5)` al final de la linea define el tamaño de ese alumno.
 - `Seña` representa pago parcial manual.
 - `Pagado` representa pago total y debe dejar `montoCobrado = precioCobrado`.
 - `saldo = max(precioCobrado - montoCobrado, 0)`.
@@ -41,3 +43,4 @@ La ruta `/informes` funciona como tablero de trabajo:
 - `Avance por libro`: oculta libros sin pedidos abiertos, incluyendo libros 100% cerrados o sin pedidos.
 
 Los filtros de libro en informes muestran solo libros con resultados pendientes para la vista actual.
+Pedidos, informes y listados por curso se pueden filtrar por tamaño.

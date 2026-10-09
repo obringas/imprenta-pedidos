@@ -2,7 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { RouterLink } from '@angular/router';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state.component';
 import { EstadoBadgeComponent } from '../../../../shared/components/estado-badge.component';
-import { ESTADO_GENERAL, ESTADO_PAGO, EstadoGeneral, EstadoPago } from '../../../../shared/constants/negocio.constants';
+import {
+  ESTADO_GENERAL,
+  ESTADO_PAGO,
+  EstadoGeneral,
+  EstadoPago,
+  TAMANIOS_IMPRESION,
+  esTamanioImpresion,
+} from '../../../../shared/constants/negocio.constants';
 import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { LibrosFacade } from '../../../libros/state/libros.facade';
@@ -83,6 +90,16 @@ import { PedidosFacade } from '../../state/pedidos.facade';
             <option value="">Todas</option>
             @for (division of facade.divisionesDisponibles(); track division) {
               <option [value]="division">{{ etiquetaDivision(division) }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Tamaño</span>
+          <select [value]="facade.filtros().tamanio ?? ''" (change)="actualizarTamanio($any($event.target).value)">
+            <option value="">Todos</option>
+            @for (tamanio of tamanios; track tamanio) {
+              <option [value]="tamanio">{{ tamanio }}</option>
             }
           </select>
         </label>
@@ -169,6 +186,16 @@ import { PedidosFacade } from '../../state/pedidos.facade';
                 }
               </select>
             </label>
+
+            <label class="field">
+              <span>Tamaño</span>
+              <select [value]="facade.filtros().tamanio ?? ''" (change)="actualizarTamanio($any($event.target).value)">
+                <option value="">Todos</option>
+                @for (tamanio of tamanios; track tamanio) {
+                  <option [value]="tamanio">{{ tamanio }}</option>
+                }
+              </select>
+            </label>
           </div>
 
           <div class="filter-group">
@@ -237,7 +264,7 @@ import { PedidosFacade } from '../../state/pedidos.facade';
                 <tr>
                   <td>
                     <a [routerLink]="['/pedidos', pedido.id]" class="card-title">{{ pedido.alumno }}</a>
-                    <div class="caption">{{ pedido.division || '-' }}</div>
+                    <div class="caption">{{ pedido.division || '-' }} • {{ pedido.tamanio }}</div>
                   </td>
                   <td>{{ pedido.libroTitulo }}</td>
                   <td>
@@ -267,7 +294,7 @@ import { PedidosFacade } from '../../state/pedidos.facade';
             <div class="card-row">
               <div>
                 <a [routerLink]="['/pedidos', pedido.id]" class="card-title">{{ pedido.alumno }}</a>
-                <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }}</p>
+                <p class="caption">{{ pedido.libroTitulo }} {{ pedido.division ? '• ' + pedido.division : '' }} • {{ pedido.tamanio }}</p>
               </div>
               <strong [class.text-danger]="pedido.saldo > 0">{{ pedido.saldo | peso }}</strong>
             </div>
@@ -324,6 +351,8 @@ export class PedidosListaPageComponent {
     ESTADO_PAGO.PAGADO,
   ];
 
+  protected readonly tamanios = TAMANIOS_IMPRESION;
+
   protected readonly filtrosMobileAbiertos = signal(false);
   protected readonly actualPagina = signal(1);
   protected readonly tamanioPagina = 12;
@@ -356,6 +385,12 @@ export class PedidosListaPageComponent {
         ? {
             label: `División: ${this.etiquetaDivision(filtros.division)}`,
             clear: () => this.actualizarDivision(''),
+          }
+        : null,
+      filtros.tamanio
+        ? {
+            label: `Tamaño: ${filtros.tamanio}`,
+            clear: () => this.actualizarTamanio(''),
           }
         : null,
       filtros.estadoGeneral
@@ -404,6 +439,10 @@ export class PedidosListaPageComponent {
 
   protected actualizarDivision(valor: string): void {
     this.facade.actualizarFiltros({ division: valor || null });
+  }
+
+  protected actualizarTamanio(valor: string): void {
+    this.facade.actualizarFiltros({ tamanio: esTamanioImpresion(valor) ? valor : null });
   }
 
   /** Los pedidos sin division cargada se muestran con un rotulo entendible. */

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state.component';
+import { TAMANIOS_IMPRESION, TamanioImpresion, esTamanioImpresion } from '../../../../shared/constants/negocio.constants';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { LibrosFacade } from '../../../libros/state/libros.facade';
 import { PedidoDetalle } from '../../../pedidos/domain/pedido.model';
@@ -31,6 +32,7 @@ interface CriteriosBusqueda {
   readonly libroId: string;
   readonly grado: string;
   readonly division: string;
+  readonly tamanio: TamanioImpresion | null;
 }
 
 @Component({
@@ -86,6 +88,20 @@ interface CriteriosBusqueda {
             }
           </select>
         </label>
+
+        <label class="field">
+          <span>Tamaño</span>
+          <select
+            [value]="tamanioSeleccionado() ?? ''"
+            [disabled]="!libroSeleccionado()"
+            (change)="cambiarTamanio($any($event.target).value)"
+          >
+            <option value="">Todos</option>
+            @for (tamanio of tamanios; track tamanio) {
+              <option [value]="tamanio">{{ tamanio }}</option>
+            }
+          </select>
+        </label>
       </div>
 
       <div class="filters-actions">
@@ -136,7 +152,10 @@ interface CriteriosBusqueda {
             <tbody>
               @for (fila of resultados(); track fila.id) {
                 <tr class="fila-editable" (dblclick)="abrirEdicion(fila.id)">
-                  <td>{{ fila.alumno }}</td>
+                  <td>
+                    {{ fila.alumno }}
+                    <div class="caption">{{ fila.tamanio }}</div>
+                  </td>
                   <td>{{ fila.curso }}</td>
                   <td class="celda-accion">
                     <button
@@ -163,7 +182,7 @@ interface CriteriosBusqueda {
       } @else {
         <app-empty-state
           title="No hay pedidos para ese filtro"
-          description="Probá con otro grado o división, o revisá que el curso esté cargado."
+          description="Probá con otro grado, división o tamaño, o revisá que el curso esté cargado."
         />
       }
     }
@@ -178,6 +197,8 @@ export class ListadoCursoPageComponent {
   protected readonly libroSeleccionado = signal(TODOS);
   protected readonly gradoSeleccionado = signal(TODOS);
   protected readonly divisionSeleccionada = signal(TODOS);
+  protected readonly tamanioSeleccionado = signal<TamanioImpresion | null>(null);
+  protected readonly tamanios = TAMANIOS_IMPRESION;
   protected readonly criteriosAplicados = signal<CriteriosBusqueda | null>(null);
   protected readonly descargando = signal(false);
   protected readonly idEnEdicion = signal<string | null>(null);
@@ -235,6 +256,7 @@ export class ListadoCursoPageComponent {
           id: pedido.id,
           alumno: pedido.alumno,
           curso: etiquetaCurso(curso),
+          tamanio: pedido.tamanio,
           grado: claveGrado(curso),
           division: claveDivision(curso),
         };
@@ -246,8 +268,8 @@ export class ListadoCursoPageComponent {
     const criterios = this.criteriosAplicados();
     if (!criterios) return '';
 
-    const curso = [criterios.grado, criterios.division].filter(Boolean).join('');
-    return curso || 'todos los cursos';
+    const curso = [criterios.grado, criterios.division].filter(Boolean).join('') || 'todos los cursos';
+    return criterios.tamanio ? `${curso} ${criterios.tamanio}` : curso;
   });
 
   constructor() {
@@ -260,6 +282,7 @@ export class ListadoCursoPageComponent {
     this.libroSeleccionado.set(valor);
     this.gradoSeleccionado.set(TODOS);
     this.divisionSeleccionada.set(TODOS);
+    this.tamanioSeleccionado.set(null);
     this.criteriosAplicados.set(null);
   }
 
@@ -276,6 +299,10 @@ export class ListadoCursoPageComponent {
     this.divisionSeleccionada.set(valor);
   }
 
+  protected cambiarTamanio(valor: string): void {
+    this.tamanioSeleccionado.set(esTamanioImpresion(valor) ? valor : null);
+  }
+
   protected buscar(): void {
     if (!this.libroSeleccionado()) return;
 
@@ -283,6 +310,7 @@ export class ListadoCursoPageComponent {
       libroId: this.libroSeleccionado(),
       grado: this.gradoSeleccionado(),
       division: this.divisionSeleccionada(),
+      tamanio: this.tamanioSeleccionado(),
     });
   }
 
@@ -290,6 +318,7 @@ export class ListadoCursoPageComponent {
     this.libroSeleccionado.set(TODOS);
     this.gradoSeleccionado.set(TODOS);
     this.divisionSeleccionada.set(TODOS);
+    this.tamanioSeleccionado.set(null);
     this.criteriosAplicados.set(null);
   }
 
@@ -395,6 +424,7 @@ export class ListadoCursoPageComponent {
     const curso = parsearCurso(pedido.division);
     if (criterios.grado && claveGrado(curso) !== criterios.grado) return false;
     if (criterios.division && claveDivision(curso) !== criterios.division) return false;
+    if (criterios.tamanio && pedido.tamanio !== criterios.tamanio) return false;
 
     return true;
   }

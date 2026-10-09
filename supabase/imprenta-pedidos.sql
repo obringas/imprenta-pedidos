@@ -17,10 +17,16 @@ do $$ begin
   create type public.estado_entrega as enum ('Pendiente', 'Entregado');
 exception when duplicate_object then null; end $$;
 
+do $$ begin
+  create type public.tamanio_impresion as enum ('A4', 'A5');
+exception when duplicate_object then null; end $$;
+
 create table if not exists public.libros (
   id            uuid primary key default gen_random_uuid(),
   titulo        text not null,
-  precio        numeric(12, 2) not null check (precio >= 0),
+  -- nullable por los libros previos a la migracion A4/A5; la app exige ambos.
+  precio_a4     numeric(12, 2) null check (precio_a4 is null or precio_a4 >= 0),
+  precio_a5     numeric(12, 2) not null check (precio_a5 >= 0),
   paginas       integer not null check (paginas > 0),
   hojas         integer generated always as (ceil(paginas::numeric / 2)) stored,
   observaciones text null,
@@ -36,6 +42,7 @@ create table if not exists public.pedidos (
   libro_id         uuid not null references public.libros(id) on update cascade on delete restrict,
   alumno           text not null,
   division         text null,
+  tamanio          public.tamanio_impresion not null,
   precio_cobrado   numeric(12, 2) not null check (precio_cobrado >= 0),
   estado_impresion public.estado_impresion not null default 'Pendiente',
   fecha_impresion  date null,
@@ -126,7 +133,8 @@ select
   end as estado_general,
   p.observaciones,
   p.created_at,
-  p.updated_at
+  p.updated_at,
+  p.tamanio
 from public.pedidos p
 join public.libros l on l.id = p.libro_id;
 
@@ -145,7 +153,8 @@ create or replace view public.informes_resumen_por_libro as
 select
   l.id as libro_id,
   l.titulo as libro_titulo,
-  l.precio as libro_precio,
+  l.precio_a4 as libro_precio_a4,
+  l.precio_a5 as libro_precio_a5,
   l.hojas as libro_hojas,
   count(p.id)::integer as total_pedidos,
   coalesce(sum(p.precio_cobrado), 0)::numeric(12,2) as total_a_cobrar,
@@ -164,7 +173,7 @@ select
 from public.libros l
 left join public.pedidos p on p.libro_id = l.id
 where l.activo = true
-group by l.id, l.titulo, l.precio, l.hojas
+group by l.id, l.titulo, l.precio_a4, l.precio_a5, l.hojas
 order by l.titulo;
 
 alter table public.libros enable row level security;

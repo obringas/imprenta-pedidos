@@ -58,7 +58,7 @@ Fuente de verdad funcional:
 
 - Tablas: `libros`, `pedidos`, `configuracion_insumos`.
 - Vistas: `pedidos_detalle`, `informes_resumen`, `informes_resumen_por_libro`.
-- Enums: `estado_pago`, `estado_impresion`, `estado_entrega`.
+- Enums: `estado_pago`, `estado_impresion`, `estado_entrega`, `tamanio_impresion`.
 - RLS habilitado para tablas persistentes.
 
 No cambiar schema sin actualizar `docs/esquema-base-de-datos.md` o su reemplazo numerado.
