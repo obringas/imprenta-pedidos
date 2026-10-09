@@ -1,25 +1,48 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import { AbstractControl, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
+import {
+  ConfiguracionInsumo,
+  reglaDeInsumo,
+  resolverUnidad,
+  ValorInsumo,
+} from '../../../shared/models/configuracion-insumos.model';
+import { validarValorInsumo } from '../../../shared/models/configuracion-insumos.validator';
+import { PesoPipe } from '../../../shared/pipes/peso.pipe';
 import { ToastService } from '../../../shared/services/toast.service';
+import { formatearValorInsumo, parsearValorInsumo } from '../domain/formato-insumo';
+import { agruparInsumos } from '../domain/grupos-insumo';
 import { InsumosStore } from '../stores/insumos.store';
 
 type InsumoForm = FormGroup<{
-  valor: FormControl<number>;
+  valor: FormControl<ValorInsumo>;
 }>;
+
+interface CostoDerivado {
+  readonly etiqueta: string;
+  readonly valor: number;
+  readonly decimales: number;
+}
 
 @Component({
   selector: 'app-configuracion-insumos-page',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PesoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="page-header">
       <div>
         <p class="eyebrow">Configuracion</p>
         <h1>Insumos</h1>
-        <p class="page-description">Edita los costos base que se usan para calcular el precio sugerido de cada libro.</p>
+        <p class="page-description">Costos, márgenes y datos del mensaje que usan el cotizador y el precio sugerido de cada libro.</p>
       </div>
     </section>
+
+    @if (store.faltantes().length > 0 && store.insumos().length > 0) {
+      <div class="card note-card stack-compact" role="status">
+        <strong class="warning-text">Faltan {{ store.faltantes().length }} datos de configuración</strong>
+        <p class="caption">El cotizador los toma como 0 hasta que se carguen: {{ store.faltantes().join(', ') }}. Hay que ejecutar la actualización de la base (migracion_cotizador.sql).</p>
+      </div>
+    }
 
     <section class="card table-card">
       @if (store.cargando() && store.insumos().length === 0) {
@@ -31,6 +54,11 @@ type InsumoForm = FormGroup<{
             </div>
           }
         </div>
+      } @else if (store.error() && store.insumos().length === 0) {
+        <div class="stack-compact">
+          <p class="text-danger">No se pudieron cargar los insumos.</p>
+          <button type="button" class="secondary-button" (click)="store.cargar()">Reintentar</button>
+        </div>
       } @else {
         <table class="data-table compact-table">
           <thead>
@@ -41,50 +69,78 @@ type InsumoForm = FormGroup<{
               <th>Accion</th>
             </tr>
           </thead>
-          <tbody>
-            @for (insumo of store.insumos(); track insumo.id) {
-              <tr [formGroup]="obtenerFormulario(insumo.id)">
-                <td>
-                  <strong>{{ insumo.descripcion }}</strong>
-                  <div class="caption">{{ insumo.clave }}</div>
-                </td>
-                <td>
-                  @if (esMonetario(insumo.unidad)) {
-                    <div class="input-with-prefix">
-                      <span class="input-prefix">$</span>
-                      <input
-                        type="text"
-                        inputmode="numeric"
-                        [value]="valorFormateado(insumo.id)"
-                        (input)="actualizarValor(insumo.id, $any($event.target).value)"
-                      />
-                    </div>
-                  } @else {
-                    <input
-                      type="text"
-                      inputmode="numeric"
-                      [value]="valorFormateado(insumo.id)"
-                      (input)="actualizarValor(insumo.id, $any($event.target).value)"
-                    />
-                  }
-                </td>
-                <td>{{ insumo.unidad }}</td>
-                <td>
-                  <button
-                    type="button"
-                    class="primary-button"
-                    [disabled]="obtenerFormulario(insumo.id).invalid || store.cargando()"
-                    (click)="guardar(insumo.id)"
-                  >
-                    Guardar
-                  </button>
-                </td>
+          @for (grupo of grupos(); track grupo.titulo) {
+            <tbody>
+              <tr class="grupo-insumo">
+                <th colspan="4" scope="colgroup">{{ grupo.titulo }}</th>
               </tr>
-            }
-          </tbody>
+              @for (insumo of grupo.insumos; track insumo.id) {
+                <tr [formGroup]="obtenerFormulario(insumo)">
+                  <td>
+                    <strong>{{ insumo.descripcion }}</strong>
+                    <div class="caption">{{ insumo.clave }}</div>
+                  </td>
+                  <td class="celda-valor-insumo">
+                    @switch (insumo.tipo) {
+                      @case ('dinero') {
+                        <div class="input-with-prefix">
+                          <span class="input-prefix">$</span>
+                          <input type="text" inputmode="numeric" [attr.aria-label]="insumo.descripcion" [value]="valorFormateado(insumo)" (input)="actualizarValor(insumo, $any($event.target).value)" />
+                        </div>
+                      }
+                      @case ('porcentaje') {
+                        <div class="input-with-suffix">
+                          <input type="text" inputmode="decimal" [attr.aria-label]="insumo.descripcion" [value]="valorFormateado(insumo)" (input)="actualizarValor(insumo, $any($event.target).value)" />
+                          <span class="input-suffix">%</span>
+                        </div>
+                      }
+                      @case ('texto') {
+                        <input type="text" maxlength="60" [attr.aria-label]="insumo.descripcion" [value]="valorFormateado(insumo)" (input)="actualizarValor(insumo, $any($event.target).value)" />
+                      }
+                      @default {
+                        <input type="text" [attr.inputmode]="reglaDe(insumo).entero ? 'numeric' : 'decimal'" [attr.aria-label]="insumo.descripcion" [value]="valorFormateado(insumo)" (input)="actualizarValor(insumo, $any($event.target).value)" />
+                      }
+                    }
+                    @if (mensajeError(insumo); as mensaje) {
+                      <small class="field-error">{{ mensaje }}</small>
+                    }
+                  </td>
+                  <td>{{ unidad(insumo) }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="primary-button"
+                      [disabled]="obtenerFormulario(insumo).invalid || store.cargando()"
+                      (click)="guardar(insumo)"
+                    >
+                      Guardar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          }
         </table>
       }
     </section>
+
+    @if (store.insumos().length > 0) {
+      <section class="card costos-derivados" aria-labelledby="titulo-costos-derivados">
+        <div>
+          <p class="eyebrow">Solo lectura</p>
+          <h2 id="titulo-costos-derivados">Costos unitarios derivados</h2>
+          <p class="caption">Se recalculan al guardar cada insumo. El toner es por cara impresa en A4; en A5 se usa la mitad.</p>
+        </div>
+        <dl class="costos-derivados-grid">
+          @for (costo of costosDerivados(); track costo.etiqueta) {
+            <div class="costo-derivado">
+              <dt>{{ costo.etiqueta }}</dt>
+              <dd>{{ costo.valor | peso: costo.decimales }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+    }
   `,
 })
 export class ConfiguracionInsumosPageComponent {
@@ -95,6 +151,21 @@ export class ConfiguracionInsumosPageComponent {
   protected readonly formularios = new Map<string, InsumoForm>();
   protected readonly skeletonRows = Array.from({ length: 4 }, (_, index) => index);
 
+  protected readonly grupos = computed(() => agruparInsumos(this.store.insumos()));
+
+  protected readonly costosDerivados = computed<CostoDerivado[]>(() => {
+    const costos = this.store.costos();
+    return [
+      { etiqueta: 'Hoja A4', valor: costos.hoja, decimales: 2 },
+      { etiqueta: 'Espiral', valor: costos.espiral, decimales: 0 },
+      { etiqueta: 'Tapa A4', valor: costos.tapaA4, decimales: 0 },
+      { etiqueta: 'Tapa A5', valor: costos.tapaA5, decimales: 0 },
+      { etiqueta: 'Cara B/N', valor: costos.caraBn, decimales: 2 },
+      { etiqueta: 'Cara con poco color', valor: costos.caraPocoColor, decimales: 2 },
+      { etiqueta: 'Cara color pleno', valor: costos.caraColorPleno, decimales: 2 },
+    ];
+  });
+
   constructor() {
     effect(() => {
       void this.store.cargar();
@@ -102,55 +173,70 @@ export class ConfiguracionInsumosPageComponent {
 
     effect(() => {
       for (const insumo of this.store.insumos()) {
-        const form = this.obtenerFormulario(insumo.id);
+        const form = this.obtenerFormulario(insumo);
         if (!form.dirty) {
-          form.patchValue({ valor: insumo.valor });
+          form.patchValue({ valor: insumo.tipo === 'texto' ? insumo.valorTexto ?? '' : insumo.valor });
         }
       }
     });
   }
 
-  protected obtenerFormulario(id: string): InsumoForm {
-    const existente = this.formularios.get(id);
+  protected obtenerFormulario(insumo: ConfiguracionInsumo): InsumoForm {
+    const existente = this.formularios.get(insumo.id);
     if (existente) {
       return existente;
     }
 
+    const inicial: ValorInsumo = insumo.tipo === 'texto' ? '' : 0;
     const creado = this.formBuilder.nonNullable.group({
-      valor: [0, [Validators.required, Validators.min(0)]],
+      valor: [inicial, [(control: AbstractControl) => this.validar(insumo, control)]],
     });
-    this.formularios.set(id, creado);
+    this.formularios.set(insumo.id, creado);
     return creado;
   }
 
-  protected esMonetario(unidad: string): boolean {
-    return unidad.toUpperCase().includes('ARS');
+  protected reglaDe(insumo: ConfiguracionInsumo) {
+    return reglaDeInsumo(insumo.clave);
   }
 
-  protected valorFormateado(id: string): string {
-    const valor = this.obtenerFormulario(id).controls.valor.value;
-    return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(valor);
+  protected unidad(insumo: ConfiguracionInsumo): string {
+    return resolverUnidad(insumo.unidad, this.store.insumos());
   }
 
-  protected actualizarValor(id: string, texto: string): void {
-    const digitos = texto.replace(/\D/g, '');
-    const valor = digitos ? Number(digitos) : 0;
-    this.obtenerFormulario(id).controls.valor.setValue(valor);
+  protected valorFormateado(insumo: ConfiguracionInsumo): string {
+    return formatearValorInsumo(this.obtenerFormulario(insumo).controls.valor.value, this.reglaDe(insumo));
   }
 
-  protected async guardar(id: string): Promise<void> {
-    const form = this.obtenerFormulario(id);
-    if (form.invalid) {
+  protected actualizarValor(insumo: ConfiguracionInsumo, texto: string): void {
+    const control = this.obtenerFormulario(insumo).controls.valor;
+    control.setValue(parsearValorInsumo(texto, this.reglaDe(insumo)));
+    control.markAsDirty();
+  }
+
+  protected mensajeError(insumo: ConfiguracionInsumo): string | null {
+    const control = this.obtenerFormulario(insumo).controls.valor;
+    return control.dirty ? (control.errors?.['insumo'] as string | undefined) ?? null : null;
+  }
+
+  protected async guardar(insumo: ConfiguracionInsumo): Promise<void> {
+    const form = this.obtenerFormulario(insumo);
+    const validado = validarValorInsumo(insumo.clave, form.getRawValue().valor);
+    if (!validado.ok) {
       form.markAllAsTouched();
       return;
     }
 
     try {
-      await this.store.actualizarInsumo(id, form.getRawValue().valor);
+      await this.store.actualizarInsumo(insumo.id, validado.valor);
       form.markAsPristine();
       this.toastService.success('Insumo actualizado correctamente.');
     } catch {
       this.toastService.error(this.store.error() ?? 'No se pudo actualizar el insumo.');
     }
+  }
+
+  private validar(insumo: ConfiguracionInsumo, control: AbstractControl): ValidationErrors | null {
+    const resultado = validarValorInsumo(insumo.clave, control.value as ValorInsumo);
+    return resultado.ok ? null : { insumo: resultado.mensaje };
   }
 }
