@@ -2,11 +2,9 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   aplicarValorInsumo,
   ConfiguracionInsumo,
-  CostosUnitariosInsumos,
   indexarInsumos,
   ValorInsumo,
 } from '../../../shared/models/configuracion-insumos.model';
-import { derivarCostosUnitarios as derivarCostosLegacy } from '../../../shared/utils/calcular-precio-sugerido.util';
 import { CostosUnitarios, ReglasPrecio } from '../../cotizador/domain/cotizacion.model';
 import { derivarCostosUnitarios, reglasDePrecio } from '../../cotizador/domain/costos-unitarios';
 import { INSUMOS_REPOSITORY } from '../repositories/insumos.repository.token';
@@ -34,12 +32,6 @@ export class InsumosStore {
   readonly reglasPrecio = computed<ReglasPrecio>(() => reglasDePrecio(this.valores()));
   /** Punto de partida de cada cotizacion y de cada libro nuevo. No toca libros ya cargados. */
   readonly margenDefault = computed(() => this.valores().margen_default);
-
-  /** @deprecated Solo para `calcularPrecioSugerido`; se elimina junto con ese util. */
-  readonly costosUnitarios = computed<CostosUnitariosInsumos>(() => {
-    const mapa = Object.fromEntries(this.insumos().map((insumo) => [insumo.clave, insumo.valor]));
-    return derivarCostosLegacy(mapa);
-  });
 
   async cargar(): Promise<void> {
     this.cargando.set(true);

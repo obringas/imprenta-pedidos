@@ -2,18 +2,30 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { startWith } from 'rxjs';
-import { TIPO_IMPRESION_POR_DEFECTO, TipoImpresion } from '../../../../shared/constants/negocio.constants';
-import { PesoPipe } from '../../../../shared/pipes/peso.pipe';
+import { Observable, startWith } from 'rxjs';
+import {
+  ETIQUETA_TIPO_IMPRESION,
+  TAMANIO_IMPRESION,
+  TamanioImpresion,
+  TIPO_IMPRESION,
+  TIPO_IMPRESION_POR_DEFECTO,
+  TipoImpresion,
+  TIPOS_IMPRESION,
+} from '../../../../shared/constants/negocio.constants';
+import { AppError } from '../../../../shared/errors/app-error';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { calcularPrecioSugerido } from '../../../../shared/utils/calcular-precio-sugerido.util';
 import { InsumosStore } from '../../../configuracion/stores/insumos.store';
+import { cotizarLibro } from '../../../cotizador/domain/cotizar-libro';
+import { MARGEN_LIBRO_MAXIMO } from '../../domain/libro.validator';
 import { LibrosFacade } from '../../state/libros.facade';
+import { PrecioSugeridoCardComponent } from '../components/precio-sugerido-card.component';
+
+type CampoValidado = 'titulo' | 'precioA4' | 'precioA5' | 'paginas' | 'margenGanancia';
 
 @Component({
   selector: 'app-libro-form-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, PesoPipe],
+  imports: [ReactiveFormsModule, RouterLink, PrecioSugeridoCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="page-header">
@@ -21,7 +33,7 @@ import { LibrosFacade } from '../../state/libros.facade';
         <p class="eyebrow">Catálogo</p>
         <h1>{{ esEdicion() ? 'Editar libro' : 'Nuevo libro' }}</h1>
       </div>
-      <a routerLink="/libros" class="secondary-button">Volver</a>
+      <a [routerLink]="rutaVolver()" class="secondary-button">Volver</a>
     </section>
 
     <form class="card form-grid" [formGroup]="form" (ngSubmit)="guardar()">
@@ -59,6 +71,29 @@ import { LibrosFacade } from '../../state/libros.facade';
         }
       </label>
 
+      <div class="form-row compact-row">
+        <label class="field">
+          <span>Tipo de impresión</span>
+          <select formControlName="tipoImpresion">
+            @for (tipo of tiposImpresion; track tipo) {
+              <option [value]="tipo">{{ etiquetaTipo[tipo] }}</option>
+            }
+          </select>
+        </label>
+
+        @if (esMixto()) {
+          <label class="field">
+            <span>Páginas a color</span>
+            <input type="number" inputmode="numeric" formControlName="paginasColor" [class.input-invalid]="errorPaginasColor() !== null && form.controls.paginasColor.touched" />
+            @if (errorPaginasColor() !== null && form.controls.paginasColor.touched) {
+              <small class="field-error">{{ errorPaginasColor() }}</small>
+            } @else {
+              <small class="caption">El resto va en blanco y negro.</small>
+            }
+          </label>
+        }
+      </div>
+
       <label class="field">
         <span>Margen de ganancia</span>
         <div class="input-with-suffix">
@@ -66,7 +101,9 @@ import { LibrosFacade } from '../../state/libros.facade';
           <span class="input-suffix">%</span>
         </div>
         @if (mostrarError('margenGanancia')) {
-          <small class="field-error">Ingresá un margen entre 0 y 500.</small>
+          <small class="field-error">Ingresá un margen entre 0 y {{ margenMaximo }}.</small>
+        } @else {
+          <small class="caption">Sobre el costo. Es el margen con el que se calculan los precios sugeridos.</small>
         }
       </label>
 
@@ -87,25 +124,20 @@ import { LibrosFacade } from '../../state/libros.facade';
         <p class="caption warning-text">Los pedidos existentes mantienen su precio original aunque cambies este valor.</p>
       </div>
 
-      @if (hojas() > 0 && form.controls.precioA4.value > 0) {
-        <div class="card suggested-price-card">
-          <p class="eyebrow">Referencia de cobro</p>
-          <strong>{{ precioPorPaginaSugerido() | peso }}</strong>
-          <p class="caption">Precio sugerido: {{ precioSugeridoRedondeado() | peso }} dividido por {{ paginas() }} paginas. Referencia de cobro por hoja de impresion: {{ precioPorPaginaSugerido() | peso }}.</p>
-        </div>
-      }
-
-      @if (insumosStore.cargando()) {
+      @if (insumosStore.cargando() && insumosStore.insumos().length === 0) {
         <div class="card suggested-price-card suggested-price-skeleton">
           <div class="skeleton-line skeleton-title"></div>
           <div class="skeleton-line skeleton-detail"></div>
         </div>
-      } @else if (resultadoCosto().hojas > 0) {
-        <div class="card suggested-price-card">
-          <p class="eyebrow">Precio sugerido</p>
-          <strong>{{ precioSugeridoRedondeado() | peso }}</strong>
-          <p class="caption">Costo base: {{ resultadoCosto().costoBase | peso }} · Hojas físicas: {{ resultadoCosto().hojas }} · Calculado con insumos A4.</p>
-          <button type="button" class="secondary-button" (click)="usarPrecioSugerido()">Usar como precio A4</button>
+      } @else if (insumosStore.faltantes().length > 0) {
+        <div class="card note-card">
+          <strong class="warning-text">Precio sugerido no disponible</strong>
+          <p class="caption">Faltan datos en Configuración &gt; Insumos para calcular el costo.</p>
+        </div>
+      } @else if (hojas() > 0) {
+        <div class="form-row compact-row">
+          <app-precio-sugerido-card [tamanio]="tamanioA4" [cotizacion]="cotizacionA4()" (usar)="usarPrecioSugerido(tamanioA4, $event)" />
+          <app-precio-sugerido-card [tamanio]="tamanioA5" [cotizacion]="cotizacionA5()" (usar)="usarPrecioSugerido(tamanioA5, $event)" />
         </div>
       }
 
@@ -124,42 +156,48 @@ export class LibroFormPageComponent {
   protected readonly libroCargado = signal(false);
   protected readonly libroId = computed(() => this.route.snapshot.paramMap.get('id'));
   protected readonly esEdicion = computed(() => Boolean(this.libroId()));
+  protected readonly tiposImpresion = TIPOS_IMPRESION;
+  protected readonly etiquetaTipo = ETIQUETA_TIPO_IMPRESION;
+  protected readonly tamanioA4 = TAMANIO_IMPRESION.A4;
+  protected readonly tamanioA5 = TAMANIO_IMPRESION.A5;
+  protected readonly margenMaximo = MARGEN_LIBRO_MAXIMO;
 
   protected readonly form = this.formBuilder.nonNullable.group({
     titulo: ['', [Validators.required, Validators.minLength(3)]],
     precioA4: [0, [Validators.required, Validators.min(1)]],
     precioA5: [0, [Validators.required, Validators.min(1)]],
     paginas: [2, [Validators.required, Validators.min(2)]],
-    margenGanancia: [156, [Validators.required, Validators.min(0), Validators.max(500)]],
+    // Se reemplaza por margen_default cuando cargan los insumos (solo en un libro nuevo).
+    margenGanancia: [0, [Validators.required, Validators.min(0), Validators.max(MARGEN_LIBRO_MAXIMO)]],
     tipoImpresion: [TIPO_IMPRESION_POR_DEFECTO as TipoImpresion],
     paginasColor: [0, [Validators.min(0)]],
     observaciones: [''],
     activo: [true],
   });
 
-  protected readonly paginas = toSignal(
-    this.form.controls.paginas.valueChanges.pipe(startWith(this.form.controls.paginas.value)),
-    { initialValue: this.form.controls.paginas.value },
-  );
-  private readonly margenGanancia = toSignal(
-    this.form.controls.margenGanancia.valueChanges.pipe(startWith(this.form.controls.margenGanancia.value)),
-    { initialValue: this.form.controls.margenGanancia.value },
-  );
+  protected readonly paginas = this.valorDe(this.form.controls.paginas);
+  private readonly margenGanancia = this.valorDe(this.form.controls.margenGanancia);
+  private readonly tipoImpresion = this.valorDe(this.form.controls.tipoImpresion);
+  private readonly paginasColor = this.valorDe(this.form.controls.paginasColor);
 
   protected readonly hojas = computed(() => this.facade.hojasPorLibro(this.paginas()));
-  protected readonly resultadoCosto = computed(() =>
-    calcularPrecioSugerido(this.paginas(), this.margenGanancia(), this.insumosStore.costosUnitarios()),
-  );
-  protected readonly precioSugeridoRedondeado = computed(() => Math.round(this.resultadoCosto().precioSugerido));
-  protected readonly precioPorPaginaSugerido = computed(() => {
-    const paginas = this.paginas();
-    const precioSugerido = this.precioSugeridoRedondeado();
-    if (paginas <= 0 || precioSugerido <= 0) {
-      return 0;
-    }
+  protected readonly esMixto = computed(() => this.tipoImpresion() === TIPO_IMPRESION.MIXTO);
+  protected readonly cotizacionA4 = computed(() => this.cotizar(TAMANIO_IMPRESION.A4));
+  protected readonly cotizacionA5 = computed(() => this.cotizar(TAMANIO_IMPRESION.A5));
 
-    return precioSugerido / paginas;
+  protected readonly errorPaginasColor = computed(() => {
+    if (!this.esMixto()) {
+      return null;
+    }
+    if (this.paginasColor() < 1) {
+      return 'Indicá cuántas páginas van a color.';
+    }
+    return this.paginasColor() > this.paginas() ? 'No pueden ser más que las páginas del libro.' : null;
   });
+
+  /** Si se llega desde el cotizador, se vuelve ahi con el libro nuevo tildado. */
+  private readonly vieneDelCotizador = this.route.snapshot.queryParamMap.get('volver') === 'cotizador';
+  protected readonly rutaVolver = computed(() => (this.vieneDelCotizador ? '/cotizador' : '/libros'));
 
   constructor() {
     effect(() => {
@@ -168,6 +206,14 @@ export class LibroFormPageComponent {
 
     effect(() => {
       void this.insumosStore.cargar();
+    });
+
+    effect(() => {
+      const margenDefault = this.insumosStore.margenDefault();
+      const control = this.form.controls.margenGanancia;
+      if (!this.esEdicion() && !control.dirty && this.insumosStore.insumos().length > 0) {
+        control.setValue(margenDefault);
+      }
     });
 
     effect(() => {
@@ -201,7 +247,7 @@ export class LibroFormPageComponent {
     });
   }
 
-  protected mostrarError(campo: 'titulo' | 'precioA4' | 'precioA5' | 'paginas' | 'margenGanancia'): boolean {
+  protected mostrarError(campo: CampoValidado): boolean {
     const control = this.form.controls[campo];
     return control.invalid && (control.touched || control.dirty);
   }
@@ -215,14 +261,14 @@ export class LibroFormPageComponent {
     return 'El título debe tener al menos 3 caracteres.';
   }
 
-  /** Los insumos configurados son A4, por eso el sugerido solo aplica a ese precio. */
-  protected usarPrecioSugerido(): void {
-    this.form.controls.precioA4.setValue(this.precioSugeridoRedondeado());
-    this.form.controls.precioA4.markAsDirty();
+  protected usarPrecioSugerido(tamanio: TamanioImpresion, precio: number): void {
+    const control = tamanio === TAMANIO_IMPRESION.A4 ? this.form.controls.precioA4 : this.form.controls.precioA5;
+    control.setValue(precio);
+    control.markAsDirty();
   }
 
   protected async guardar(): Promise<void> {
-    if (this.form.invalid) {
+    if (this.form.invalid || this.errorPaginasColor() !== null) {
       this.form.markAllAsTouched();
       this.toastService.error('Revisa los campos obligatorios del libro antes de guardar.');
       return;
@@ -230,14 +276,46 @@ export class LibroFormPageComponent {
 
     try {
       const raw = this.form.getRawValue();
-      await this.facade.guardar({
-        ...raw,
-        observaciones: raw.observaciones.trim() || null,
-      }, this.libroId() ?? undefined);
+      const libro = await this.facade.guardar(
+        {
+          ...raw,
+          // Fuera de mixto las paginas a color no cuentan: no se guardan.
+          paginasColor: raw.tipoImpresion === TIPO_IMPRESION.MIXTO ? raw.paginasColor : 0,
+          observaciones: raw.observaciones.trim() || null,
+        },
+        this.libroId() ?? undefined,
+      );
       this.toastService.success(this.esEdicion() ? 'Libro actualizado correctamente.' : 'Libro creado correctamente.');
-      await this.router.navigateByUrl('/libros');
-    } catch {
-      this.toastService.error('No se pudo guardar el libro.');
+      await this.volver(libro.id);
+    } catch (error) {
+      this.toastService.error(error instanceof AppError && error.codigo === 'VALIDATION' ? error.mensaje : 'No se pudo guardar el libro.');
     }
+  }
+
+  private async volver(libroId: string): Promise<void> {
+    if (this.vieneDelCotizador) {
+      await this.router.navigate(['/cotizador'], { queryParams: { libro: libroId } });
+      return;
+    }
+
+    await this.router.navigateByUrl('/libros');
+  }
+
+  private cotizar(tamanio: TamanioImpresion) {
+    return cotizarLibro(
+      {
+        paginas: this.paginas(),
+        tipoImpresion: this.tipoImpresion(),
+        paginasColor: this.paginasColor(),
+        tamanio,
+        margenGanancia: this.margenGanancia(),
+      },
+      this.insumosStore.costos(),
+      this.insumosStore.reglasPrecio(),
+    );
+  }
+
+  private valorDe<T>(control: { value: T; valueChanges: Observable<T> }) {
+    return toSignal(control.valueChanges.pipe(startWith(control.value)), { initialValue: control.value });
   }
 }

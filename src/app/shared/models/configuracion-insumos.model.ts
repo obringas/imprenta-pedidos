@@ -170,11 +170,3 @@ export function resolverUnidad(unidad: string, insumos: readonly ConfiguracionIn
       : new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(insumo.valor);
   });
 }
-
-/** @deprecated Solo lo usa `calcular-precio-sugerido.util.ts`, que se elimina con el cotizador. */
-export interface CostosUnitariosInsumos {
-  readonly tapaPorLibro: number;
-  readonly espiralPorLibro: number;
-  readonly hojaUnitaria: number;
-  readonly tonerPorCara: number;
-}
