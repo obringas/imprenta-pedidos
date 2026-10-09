@@ -1,5 +1,55 @@
 # 07-changelog.md - Memoria de cambios
 
+## [2026-10-09] - Agente: Claude (cotizador)
+
+### Cambios
+- Nueva pantalla `/cotizador` (item "Cotizador" en el menu): se tildan libros activos o se carga uno nuevo, se negocia el margen (general con input y slider 0..300 %, o fijado por libro), se puede escribir un precio objetivo por tamaño y se ve, en A4 y A5, precio, precio por cantidad, ganancia, margen y costo. Debajo del margen minimo la tarjeta se pone roja y "Aplicar precios" pide confirmacion. "Aplicar precios" guarda `precio_a4`, `precio_a5` y el margen usado en el libro.
+- Mensaje de WhatsApp generado en vivo con los precios en pantalla, con opciones de precio por cantidad, A5 y tomos. Se puede editar, copiar o abrir en WhatsApp (`wa.me`).
+- Modelo de costos nuevo (funciones puras en `features/cotizador/domain/`): toner negro y color por separado, cobertura por tipo de pagina, A5 2-up sobre A4 cortada, tomos por espiral. Reemplaza a `calcular-precio-sugerido.util.ts`, que se elimino.
+- `/configuracion/insumos`: 19 filas nuevas agrupadas por bloque (Papel, Espiral y tapa, Toner, Cobertura de pagina, Precio, Mensaje), input segun el tipo de la clave (dinero, porcentaje, numero con decimales, texto), validacion con el limite de cada clave y bloque "Costos unitarios derivados". `toner_costo` y `toner_impresiones` se ocultan.
+- Formulario de libro: tipo de impresion y paginas a color; un libro nuevo arranca con `margen_default`; "Usar precio A4 sugerido" y "Usar precio A5 sugerido" con costo, ganancia y margen. Se quito la tarjeta "Referencia de cobro", que dependia del calculo viejo.
+- `LibrosFacade.guardar` valida con Zod (`libro.validator.ts`) y devuelve el libro guardado.
+- Migracion `supabase/migracion_cotizador.sql` y actualizacion de `imprenta-pedidos.sql` y `configuracion-insumos.sql`.
+
+### Motivo
+El precio sugerido solo calculaba A4, con un toner unico que trataba toda pagina como color pleno. La usuaria necesita cotizar libros en A4 y A5 con costos reales, negociar el margen por curso y mandar el presupuesto al grupo del colegio.
+
+### Archivos afectados
+- `supabase/migracion_cotizador.sql` (nuevo), `supabase/imprenta-pedidos.sql`, `supabase/configuracion-insumos.sql`
+- `src/app/core/supabase/database.types.ts`, `src/app/app.routes.ts`, `src/app/core/layout/app-shell.component.ts`, `src/styles.css`
+- `src/app/shared/constants/negocio.constants.ts`, `src/app/shared/pipes/peso.pipe.ts`
+- `src/app/shared/models/configuracion-insumos.model.ts`, `configuracion-insumos.validator.ts` (nuevo), `configuracion-insumos.model.spec.ts` (nuevo)
+- `src/app/shared/utils/calcular-precio-sugerido.util.ts` y su spec (eliminados)
+- `src/app/features/configuracion/`: `domain/grupos-insumo.ts`, `domain/formato-insumo.ts` y sus specs (nuevos), `pages/configuracion-insumos.page.ts`, `repositories/insumos.repository.ts`, `repositories/insumos.repository.interface.ts`, `stores/insumos.store.ts`
+- `src/app/features/libros/`: `domain/libro.model.ts`, `domain/libro.validator.ts` y spec (nuevos), `data/libros.repository.ts`, `state/libros.facade.ts` y spec (nuevo), `ui/pages/libro-form.page.ts`, `ui/components/precio-sugerido-card.component.ts` (nuevo)
+- `src/app/features/cotizador/` (nuevo): `domain/` (`cotizacion.model.ts`, `costos-unitarios.ts`, `cotizar-libro.ts`, `mensaje-whatsapp.ts`, fixture y specs), `state/cotizador.facade.ts` y spec, `ui/pages/cotizador.page.ts`, `ui/components/` (`margen-general`, `fila-cotizacion`, `mensaje-whatsapp`), `cotizador.routes.ts`
+- `src/app/features/data/mock-data.ts`
+- `docs/01-context.md`, `docs/02-architecture.md`, `docs/06-decisions.md`, `docs/08-known-issues.md`, `docs/esquema-base-de-datos.md`
+
+### Decisiones tomadas
+Ver ADR-0004 en `06-decisions.md`. Las dos que se apartan del pedido original:
+- Redondeo: el precio va hacia arriba y el precio por cantidad hacia abajo. Con un solo redondeo al multiplo mas cercano, 130 paginas A4 daba $11.000 y no $11.050. Con todo hacia arriba, el precio por cantidad daba $9.750 y no $9.700.
+- Costo A5 de 130 paginas: 2.277,70 con la regla `ceil(paginas / 4)` hojas (33). El valor esperado ≈ 2.272 corresponde a 32,5 hojas, sin el `ceil`. Precio y precio por cantidad dan igual ($5.700 y $5.000).
+
+Ademas:
+- `whatsapp_contacto` y `whatsapp_firma` van en la columna nueva `configuracion_insumos.valor_texto`, porque `valor` es `numeric`.
+- `Libro` no tiene autor: la parte "– {autor si hay}" del mensaje no aparece. No se agrego la columna porque no estaba pedida.
+- La migracion tambien hace que la unidad de `tapa_paquete` y `espiral_paquete` muestre la cantidad vigente (`{tapa_cantidad}`), solo si todavia tenian el texto fijo "ARS x N unidades".
+- Los estilos propios del cotizador y de insumos estan en sus componentes (carga diferida): en `styles.css` el bundle inicial pasaba el budget de 500 kB por 928 bytes.
+
+### Validaciones realizadas
+- `npm test`: 108 de 108. Los valores del enunciado estan en `cotizar-libro.spec.ts` y `costos-unitarios.spec.ts` (caras 6,92 / 25,77 / 54,06; 130 pag A4 $11.050 y $9.700; A5 $5.700 y $5.000; 308 pag color pleno 2 tomos y costo ≈ 19.051; mixto 20 + 288; descuento 0; precio objetivo $9.000 → 104,1 % y $6.500 → 47,4 %).
+- `npm run build` sin errores ni advertencias (bundle inicial 498 kB).
+- `migracion_cotizador.sql` contra PGlite (Postgres 17 en WebAssembly, instalado fuera del proyecto), sobre el schema y el seed de `main` con la etiqueta de toner editada como en produccion: 22 controles, entre ellos 27 claves sin pisar valores editados, unidad editada a mano sin tocar, etiqueta del toner corregida, libros existentes en `poco_color` con su margen, default 150, los tres checks nuevos, reejecucion idempotente, vistas funcionando, rollback completo (columnas, inserts y default) cuando falta una clave, y schema base nuevo instalable y reejecutable.
+- Validacion manual en 375 px y 1280 px con el repositorio local (localStorage), usando una configuracion de serve temporal que se borro al terminar. Insumos: grupos, toner viejo oculto, guardar 0,8 en el factor recalcula los costos derivados ($6,92 → $8,65), 150 % de cobertura muestra "El maximo es 100." y deshabilita Guardar, la firma se acepta como texto. Libro: margen 150 en uno nuevo y 156 al editar uno existente, mixto con 20 paginas a color, botones A4/A5. Cotizador: margen general y fijado, "Seguir al general", precio objetivo $4.000 marca la fila en rojo y pide confirmacion, se guardan $4.000 / $3.550 y margen 37,88, toggles del mensaje, link `wa.me`, "Nuevo libro" vuelve tildado y conserva la seleccion. Sin scroll horizontal y sin errores de consola.
+- No se ejecuto nada contra la base real.
+
+### Pendientes / Follow-ups
+- Ejecutar `supabase/migracion_cotizador.sql` en el SQL Editor de Supabase **antes** de publicar (push de `main`). Ver `08-known-issues.md`.
+- Revisar en `/configuracion/insumos` los valores iniciales de las claves nuevas (toner, coberturas, descuento, WhatsApp).
+- Informes sigue contando las hojas A5 como A4 (`08-known-issues.md`).
+- Cuando nadie consulte el historico, borrar las filas `toner_costo` y `toner_impresiones`.
+
 ## [2026-10-08] - Agente: Claude (cotizacion 2026-10)
 
 ### Cambios

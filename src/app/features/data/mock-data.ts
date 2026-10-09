@@ -3,13 +3,13 @@ import { Pedido } from '../pedidos/domain/pedido.model';
 import { ESTADO_ENTREGA, ESTADO_IMPRESION, ESTADO_PAGO, TAMANIO_IMPRESION } from '../../shared/constants/negocio.constants';
 
 export const LIBROS_INICIALES: Libro[] = [
-  { id: 'libro-1', titulo: 'WORKBOOK', precioA4: 10300, precioA5: 7200, paginas: 144, hojas: 72, observaciones: 'Uso intensivo al inicio del ciclo.', margenGanancia: 156, activo: true },
-  { id: 'libro-2', titulo: 'Cartilla 7ª', precioA4: 7500, precioA5: 5200, paginas: 96, hojas: 48, observaciones: null, margenGanancia: 156, activo: true },
-  { id: 'libro-3', titulo: 'Sentir y pensar 2', precioA4: 8500, precioA5: 6000, paginas: 80, hojas: 40, observaciones: null, margenGanancia: 156, activo: true },
-  { id: 'libro-4', titulo: 'Prácticas del Lenguaje 5', precioA4: 9200, precioA5: 6400, paginas: 128, hojas: 64, observaciones: 'Precio acordado con el colegio.', margenGanancia: 156, activo: true },
-  { id: 'libro-5', titulo: 'Matemática 4', precioA4: 8800, precioA5: 6200, paginas: 112, hojas: 56, observaciones: null, margenGanancia: 156, activo: true },
-  { id: 'libro-6', titulo: 'Cs. Naturales 6', precioA4: 9600, precioA5: 6700, paginas: 120, hojas: 60, observaciones: null, margenGanancia: 156, activo: true },
-  { id: 'libro-7', titulo: 'Cartilla Inglés 7', precioA4: 7000, precioA5: 4900, paginas: 72, hojas: 36, observaciones: 'Confirmar versión final del PDF.', margenGanancia: 156, activo: true },
+  { id: 'libro-1', titulo: 'WORKBOOK', precioA4: 10300, precioA5: 7200, paginas: 144, hojas: 72, observaciones: 'Uso intensivo al inicio del ciclo.', margenGanancia: 156, tipoImpresion: 'poco_color', paginasColor: 0, activo: true },
+  { id: 'libro-2', titulo: 'Cartilla 7ª', precioA4: 7500, precioA5: 5200, paginas: 96, hojas: 48, observaciones: null, margenGanancia: 156, tipoImpresion: 'poco_color', paginasColor: 0, activo: true },
+  { id: 'libro-3', titulo: 'Sentir y pensar 2', precioA4: 8500, precioA5: 6000, paginas: 80, hojas: 40, observaciones: null, margenGanancia: 156, tipoImpresion: 'poco_color', paginasColor: 0, activo: true },
+  { id: 'libro-4', titulo: 'Prácticas del Lenguaje 5', precioA4: 9200, precioA5: 6400, paginas: 128, hojas: 64, observaciones: 'Precio acordado con el colegio.', margenGanancia: 156, tipoImpresion: 'poco_color', paginasColor: 0, activo: true },
+  { id: 'libro-5', titulo: 'Matemática 4', precioA4: 8800, precioA5: 6200, paginas: 112, hojas: 56, observaciones: null, margenGanancia: 156, tipoImpresion: 'poco_color', paginasColor: 0, activo: true },
+  { id: 'libro-6', titulo: 'Cs. Naturales 6', precioA4: 9600, precioA5: 6700, paginas: 120, hojas: 60, observaciones: null, margenGanancia: 156, tipoImpresion: 'poco_color', paginasColor: 0, activo: true },
+  { id: 'libro-7', titulo: 'Cartilla Inglés 7', precioA4: 7000, precioA5: 4900, paginas: 72, hojas: 36, observaciones: 'Confirmar versión final del PDF.', margenGanancia: 156, tipoImpresion: 'poco_color', paginasColor: 0, activo: true },
 ];
 
 export const PEDIDOS_INICIALES: Pedido[] = [

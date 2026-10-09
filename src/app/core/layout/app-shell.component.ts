@@ -6,7 +6,7 @@ import { AuthService } from '../auth/auth.service';
 type NavItem = {
   readonly label: string;
   readonly ruta: string;
-  /** Version abreviada para la barra inferior, donde hay 5 items en 375px. */
+  /** Version abreviada para la barra inferior, donde hay 6 items en 375px. */
   readonly labelCorto?: string;
 };
 
@@ -77,6 +77,7 @@ export class AppShellComponent {
   protected readonly navItems: readonly NavItem[] = [
     { label: 'Pedidos', ruta: '/pedidos' },
     { label: 'Libros', ruta: '/libros' },
+    { label: 'Cotizador', ruta: '/cotizador', labelCorto: 'Cotizar' },
     { label: 'Informes', ruta: '/informes' },
     { label: 'Listados', ruta: '/listados' },
     { label: 'Configuracion', ruta: '/configuracion', labelCorto: 'Config.' },

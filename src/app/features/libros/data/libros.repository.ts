@@ -1,6 +1,7 @@
 ﻿import { inject, Injectable } from '@angular/core';
 import { SUPABASE_CLIENT } from '../../../core/supabase/supabase.client';
 import { Database } from '../../../core/supabase/database.types';
+import { esTipoImpresion, TIPO_IMPRESION_POR_DEFECTO, TipoImpresion } from '../../../shared/constants/negocio.constants';
 import { AppError } from '../../../shared/errors/app-error';
 import { LIBROS_INICIALES } from '../../data/mock-data';
 import { normalizarTextoMojibake } from '../../../shared/utils/text-normalizer';
@@ -8,9 +9,12 @@ import { ActualizarLibroInput, CrearLibroInput, Libro } from '../domain/libro.mo
 
 const STORAGE_KEY = 'imprenta-libros';
 
-/** Lo guardado en localStorage antes de A4/A5 tenia un unico `precio`. */
-type LibroAlmacenado = Partial<Pick<Libro, 'precioA4' | 'precioA5'>> &
-  Omit<Libro, 'precioA4' | 'precioA5'> & { readonly precio?: number };
+/**
+ * Lo guardado en localStorage antes de A4/A5 tenia un unico `precio`, y antes
+ * del cotizador no tenia tipo de impresion ni paginas a color.
+ */
+type LibroAlmacenado = Partial<Pick<Libro, 'precioA4' | 'precioA5' | 'tipoImpresion' | 'paginasColor'>> &
+  Omit<Libro, 'precioA4' | 'precioA5' | 'tipoImpresion' | 'paginasColor'> & { readonly precio?: number };
 
 export interface LibrosRepository {
   findAll(): Promise<Libro[]>;
@@ -39,6 +43,8 @@ export class LocalLibrosRepository implements LibrosRepository {
       hojas: Math.ceil(input.paginas / 2),
       observaciones: input.observaciones,
       margenGanancia: input.margenGanancia,
+      tipoImpresion: input.tipoImpresion,
+      paginasColor: input.paginasColor,
       activo: true,
     };
 
@@ -77,6 +83,8 @@ export class LocalLibrosRepository implements LibrosRepository {
       hojas: libro.hojas ?? Math.ceil(libro.paginas / 2),
       observaciones: libro.observaciones ?? null,
       margenGanancia: libro.margenGanancia ?? 156,
+      tipoImpresion: libro.tipoImpresion ?? TIPO_IMPRESION_POR_DEFECTO,
+      paginasColor: libro.paginasColor ?? 0,
       titulo: normalizarTextoMojibake(libro.titulo),
     }));
 
@@ -175,6 +183,8 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       paginas: input.paginas,
       observaciones: input.observaciones,
       margen_ganancia: input.margenGanancia,
+      tipo_impresion: input.tipoImpresion,
+      paginas_color: input.paginasColor,
     };
   }
 
@@ -188,8 +198,15 @@ export class SupabaseLibrosRepository implements LibrosRepository {
       hojas: row.hojas,
       observaciones: row.observaciones,
       margenGanancia: Number(row.margen_ganancia ?? 156),
+      tipoImpresion: this.mapTipoImpresion(row.tipo_impresion),
+      paginasColor: row.paginas_color ?? 0,
       activo: row.activo,
     };
+  }
+
+  /** Antes de `migracion_cotizador.sql` la columna no existe y llega undefined. */
+  private mapTipoImpresion(valor: string | undefined): TipoImpresion {
+    return valor && esTipoImpresion(valor) ? valor : TIPO_IMPRESION_POR_DEFECTO;
   }
 
   private esColumnaMargenInexistente(error: unknown): boolean {

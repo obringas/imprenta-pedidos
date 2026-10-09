@@ -1,4 +1,6 @@
-﻿export interface Database {
+﻿import { ClaveInsumo } from '../../shared/models/configuracion-insumos.model';
+
+export interface Database {
   public: {
     Tables: {
       libros: {
@@ -11,6 +13,8 @@
           hojas: number;
           observaciones: string | null;
           margen_ganancia: number;
+          tipo_impresion: 'bn' | 'poco_color' | 'color_pleno' | 'mixto';
+          paginas_color: number;
           activo: boolean;
           created_at: string;
           updated_at: string;
@@ -23,6 +27,8 @@
           paginas: number;
           observaciones?: string | null;
           margen_ganancia?: number;
+          tipo_impresion?: 'bn' | 'poco_color' | 'color_pleno' | 'mixto';
+          paginas_color?: number;
           activo?: boolean;
         };
         Update: {
@@ -32,39 +38,27 @@
           paginas?: number;
           observaciones?: string | null;
           margen_ganancia?: number;
+          tipo_impresion?: 'bn' | 'poco_color' | 'color_pleno' | 'mixto';
+          paginas_color?: number;
           activo?: boolean;
         };
       };
       configuracion_insumos: {
         Row: {
           id: string;
-          clave:
-            | 'tapa_paquete'
-            | 'tapa_cantidad'
-            | 'espiral_paquete'
-            | 'espiral_cantidad'
-            | 'hojas_resma'
-            | 'hojas_cantidad'
-            | 'toner_costo'
-            | 'toner_impresiones';
+          clave: ClaveInsumo;
           descripcion: string;
           valor: number;
+          valor_texto: string | null;
           unidad: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          clave:
-            | 'tapa_paquete'
-            | 'tapa_cantidad'
-            | 'espiral_paquete'
-            | 'espiral_cantidad'
-            | 'hojas_resma'
-            | 'hojas_cantidad'
-            | 'toner_costo'
-            | 'toner_impresiones';
+          clave: ClaveInsumo;
           descripcion: string;
           valor: number;
+          valor_texto?: string | null;
           unidad: string;
           updated_at?: string;
         };
@@ -72,6 +66,7 @@
           clave?: Database['public']['Tables']['configuracion_insumos']['Row']['clave'];
           descripcion?: string;
           valor?: number;
+          valor_texto?: string | null;
           unidad?: string;
           updated_at?: string;
         };
