@@ -35,6 +35,11 @@ export const routes: Routes = [
           import('./features/listados/listados.routes').then((module) => module.LISTADOS_ROUTES),
       },
       {
+        path: 'cotizador',
+        loadChildren: () =>
+          import('./features/cotizador/cotizador.routes').then((module) => module.COTIZADOR_ROUTES),
+      },
+      {
         path: 'configuracion',
         loadChildren: () =>
           import('./features/configuracion/configuracion.routes').then((module) => module.CONFIGURACION_ROUTES),

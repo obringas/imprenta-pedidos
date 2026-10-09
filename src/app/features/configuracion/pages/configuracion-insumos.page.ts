@@ -28,6 +28,18 @@ interface CostoDerivado {
   standalone: true,
   imports: [ReactiveFormsModule, PesoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    .grupo-insumo th { padding-top: 1.1rem; background: var(--brand-soft); color: var(--brand-deep); font-size: 0.82rem; }
+    .data-table tr.grupo-insumo:hover { background: transparent; }
+    /* En 375px el input quedaba en "$ 5" para 59.000: ancho minimo y la tabla scrollea en su tarjeta. */
+    .celda-valor-insumo { min-width: 9.5rem; }
+    .costos-derivados { display: grid; gap: 1rem; margin-top: 1rem; }
+    .costos-derivados h2 { margin: 0.15rem 0 0.25rem; font-size: 1.2rem; }
+    .costos-derivados-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin: 0; }
+    .costo-derivado { display: grid; gap: 0.2rem; padding: 0.75rem 0.9rem; border-radius: 0.9rem; background: rgba(91, 56, 176, 0.07); }
+    .costo-derivado dt { font-size: 0.82rem; color: #4b3c76; }
+    .costo-derivado dd { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--brand-deep); }
+  `,
   template: `
     <section class="page-header">
       <div>
